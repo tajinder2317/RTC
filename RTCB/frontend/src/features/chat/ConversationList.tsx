@@ -10,6 +10,7 @@ type User = {
 type Conversation = {
   id: string;
   createdAt: string;
+  unreadCount: number;
   members: {
     user: User;
   }[];
@@ -96,7 +97,34 @@ export default function ConversationList({
               cursor: "pointer",
             }}
           >
-            <strong>{otherUser.username}</strong>
+            <div
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <strong>{otherUser.username}</strong>
+
+              {conversation.unreadCount > 0 && (
+                <span
+                  style={{
+                    background: "#2563eb",
+                    color: "white",
+                    borderRadius: "999px",
+                    minWidth: "22px",
+                    height: "22px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "12px",
+                    fontWeight: "bold",
+                  }}
+                >
+                  {conversation.unreadCount}
+                </span>
+              )}
+            </div>
 
             <div
               style={{

@@ -90,6 +90,15 @@ export default function ChatScreen() {
       }
 
       setMessages(data.messages);
+      await fetch(
+        `http://localhost:5000/conversations/${conversation.id}/read`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
     } catch (error) {
       console.error("Open conversation error:", error);
     }

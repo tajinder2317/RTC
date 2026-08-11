@@ -122,43 +122,70 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.userId;
 
-    const conversations = await prisma.conversation.findMany({
+    const memberships = await prisma.conversationMember.findMany({
       where: {
-        members: {
-          some: {
-            userId,
-          },
-        },
-      },
-      orderBy: {
-        createdAt: "desc",
+        userId,
       },
       include: {
-        members: {
+        conversation: {
           include: {
-            user: {
+            members: {
+              include: {
+                user: {
+                  select: {
+                    id: true,
+                    username: true,
+                    email: true,
+                  },
+                },
+              },
+            },
+            messages: {
+              orderBy: {
+                createdAt: "desc",
+              },
+              take: 1,
               select: {
                 id: true,
-                username: true,
-                email: true,
+                text: true,
+                senderId: true,
+                createdAt: true,
               },
             },
           },
         },
-        messages: {
-          orderBy: {
-            createdAt: "desc",
-          },
-          take: 1,
-          select: {
-            id: true,
-            text: true,
-            senderId: true,
-            createdAt: true,
-          },
+      },
+      orderBy: {
+        conversation: {
+          createdAt: "desc",
         },
       },
     });
+
+    const conversations = await Promise.all(
+      memberships.map(async (membership) => {
+        const unreadCount = await prisma.message.count({
+          where: {
+            conversationId: membership.conversationId,
+            senderId: {
+              not: userId,
+            },
+            ...(membership.lastReadAt
+              ? {
+                  createdAt: {
+                    gt: membership.lastReadAt,
+                  },
+                }
+              : {}),
+          },
+        });
+
+        return {
+          ...membership.conversation,
+          unreadCount,
+        };
+      }),
+    );
 
     return res.json({
       conversations,
@@ -171,5 +198,52 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
     });
   }
 });
+router.post(
+  "/:conversationId/read",
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const conversationId = req.params.conversationId as string;
+      const userId = req.user!.userId;
+
+      const membership = await prisma.conversationMember.findUnique({
+        where: {
+          userId_conversationId: {
+            userId,
+            conversationId,
+          },
+        },
+      });
+
+      if (!membership) {
+        return res.status(403).json({
+          message: "You are not a member of this conversation",
+        });
+      }
+
+      await prisma.conversationMember.update({
+        where: {
+          userId_conversationId: {
+            userId,
+            conversationId,
+          },
+        },
+        data: {
+          lastReadAt: new Date(),
+        },
+      });
+
+      return res.json({
+        message: "Conversation marked as read",
+      });
+    } catch (error) {
+      console.error("Mark conversation read error:", error);
+
+      return res.status(500).json({
+        message: "Internal server error",
+      });
+    }
+  },
+);
 
 export default router;

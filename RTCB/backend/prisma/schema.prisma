@@ -78,6 +78,7 @@ model ConversationMember {
   id             String       @id @default(cuid())
   userId         String
   conversationId String
+  lastReadAt     DateTime?
 
   conversation Conversation @relation(fields: [conversationId], references: [id])
   user         User         @relation(fields: [userId], references: [id])
