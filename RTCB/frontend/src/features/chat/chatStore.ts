@@ -17,6 +17,10 @@ type ChatState = {
     username: string;
   } | null;
 
+  onlineUsers: string[];
+
+  setUserOnline: (userId: string) => void;
+  setUserOffline: (userId: string) => void;
   setConversation: (conversationId: string) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
@@ -28,6 +32,7 @@ export const useChatStore = create<ChatState>((set) => ({
   currentConversationId: null,
   messages: [],
   typingUser: null,
+  onlineUsers: [],
 
   setConversation: (conversationId) => {
     socket.emit("joinConversation", conversationId);
@@ -61,6 +66,20 @@ export const useChatStore = create<ChatState>((set) => ({
       typingUser: null,
     });
   },
+
+  setUserOnline: (userId) => {
+    set((state) => ({
+      onlineUsers: state.onlineUsers.includes(userId)
+        ? state.onlineUsers
+        : [...state.onlineUsers, userId],
+    }));
+  },
+
+  setUserOffline: (userId) => {
+    set((state) => ({
+      onlineUsers: state.onlineUsers.filter((id) => id !== userId),
+    }));
+  },
 }));
 
 socket.on("newMessage", (message: Message) => {
@@ -79,4 +98,17 @@ socket.on("userTyping", (user: { userId: string; username: string }) => {
 
 socket.on("userStoppedTyping", () => {
   useChatStore.getState().setTypingUser(null);
+});
+
+socket.on("userOnline", ({ userId }: { userId: string }) => {
+  useChatStore.getState().setUserOnline(userId);
+});
+
+socket.on("userOffline", ({ userId }: { userId: string }) => {
+  useChatStore.getState().setUserOffline(userId);
+});
+socket.on("onlineUsers", ({ userIds }: { userIds: string[] }) => {
+  useChatStore.setState({
+    onlineUsers: userIds,
+  });
 });

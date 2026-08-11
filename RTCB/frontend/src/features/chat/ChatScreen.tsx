@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "../auth/authStore";
 import MessageInput from "./MessageInput";
 import ConversationList from "./ConversationList";
@@ -33,7 +33,9 @@ export default function ChatScreen() {
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messages = useChatStore((state) => state.messages);
+  const onlineUsers = useChatStore((state) => state.onlineUsers);
   const typingUser = useChatStore((state) => state.typingUser);
   const setConversation = useChatStore((state) => state.setConversation);
   const setMessages = useChatStore((state) => state.setMessages);
@@ -48,6 +50,13 @@ export default function ChatScreen() {
       socket.disconnect();
     };
   }, [token]);
+
+  // ----------
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+    });
+  }, [messages]);
 
   // Open an existing conversation
   const openConversation = async (conversation: Conversation) => {
@@ -95,7 +104,6 @@ export default function ChatScreen() {
     socket.emit("sendMessage", {
       conversationId,
       text,
-      senderId: currentUser.id,
     });
   };
 
@@ -165,6 +173,20 @@ export default function ChatScreen() {
                 }}
               >
                 <h2 style={{ margin: 0 }}>{selectedUser.username}</h2>
+
+                <div
+                  style={{
+                    marginTop: "5px",
+                    fontSize: "14px",
+                    color: onlineUsers.includes(selectedUser.id)
+                      ? "green"
+                      : "#777",
+                  }}
+                >
+                  {onlineUsers.includes(selectedUser.id)
+                    ? "🟢 Online"
+                    : "⚫ Offline"}
+                </div>
               </div>
 
               {/* Messages */}
@@ -180,7 +202,6 @@ export default function ChatScreen() {
                 ) : (
                   messages.map((message) => {
                     const isMine = message.senderId === currentUser?.id;
-
                     return (
                       <div
                         key={message.id}
@@ -204,6 +225,7 @@ export default function ChatScreen() {
                     );
                   })
                 )}
+                <div ref={messagesEndRef} />
               </div>
 
               {/* Typing indicator */}

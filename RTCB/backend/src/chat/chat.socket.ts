@@ -1,52 +1,120 @@
-import type { Server } from "socket.io";
+import type { Server, Socket } from "socket.io";
+import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
 
+const onlineUsers = new Map<string, number>();
+
+type JwtPayload = {
+  userId: string;
+  username: string;
+};
+
 export function registerChatSocket(io: Server) {
-  io.on("connection", (socket) => {
-    console.log("Socket connected:", socket.id);
+  // Authenticate every Socket.IO connection
+  io.use((socket, next) => {
+    try {
+      const token = socket.handshake.auth?.token;
+
+      if (!token) {
+        return next(new Error("Authentication required"));
+      }
+
+      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+
+      socket.data.userId = decoded.userId;
+      socket.data.username = decoded.username;
+
+      next();
+    } catch (error) {
+      console.error("Socket authentication failed:", error);
+      next(new Error("Invalid authentication token"));
+    }
+  });
+
+  io.on("connection", (socket: Socket) => {
+    const userId = socket.data.userId;
+    const username = socket.data.username;
+
+    const currentConnections = onlineUsers.get(userId) ?? 0;
+
+    onlineUsers.set(userId, currentConnections + 1);
+
+    if (currentConnections === 0) {
+      socket.broadcast.emit("userOnline", {
+        userId,
+        username,
+      });
+    }
+    socket.emit("onlineUsers", {
+      userIds: Array.from(onlineUsers.keys()),
+    });
+
+    console.log(
+      `Socket connected: ${socket.id} | User: ${username} (${userId})`,
+    );
+
+    // Put the user in their personal room
+    socket.join(`user:${userId}`);
+
+    // Tell everyone that this user is online
+    socket.broadcast.emit("userOnline", {
+      userId,
+      username,
+    });
 
     socket.on("joinConversation", async (conversationId: string) => {
-      socket.join(conversationId);
+      try {
+        const membership = await prisma.conversationMember.findUnique({
+          where: {
+            userId_conversationId: {
+              userId,
+              conversationId,
+            },
+          },
+        });
 
-      console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
+        if (!membership) {
+          console.log("User is not a member of this conversation");
+          return;
+        }
+
+        socket.join(conversationId);
+
+        console.log(
+          `Socket ${socket.id} joined conversation ${conversationId}`,
+        );
+      } catch (error) {
+        console.error("Join conversation error:", error);
+      }
     });
-    socket.on(
-      "typing",
-      (data: { conversationId: string; userId: string; username: string }) => {
-        socket.to(data.conversationId).emit("userTyping", {
-          userId: data.userId,
-          username: data.username,
-        });
-      },
-    );
 
-    socket.on(
-      "stopTyping",
-      (data: { conversationId: string; userId: string }) => {
-        socket.to(data.conversationId).emit("userStoppedTyping", {
-          userId: data.userId,
-        });
-      },
-    );
+    socket.on("typing", (data: { conversationId: string }) => {
+      socket.to(data.conversationId).emit("userTyping", {
+        userId,
+        username,
+      });
+    });
+
+    socket.on("stopTyping", (data: { conversationId: string }) => {
+      socket.to(data.conversationId).emit("userStoppedTyping", {
+        userId,
+      });
+    });
 
     socket.on(
       "sendMessage",
-      async (data: {
-        conversationId: string;
-        text: string;
-        senderId: string;
-      }) => {
+      async (data: { conversationId: string; text: string }) => {
         try {
-          const { conversationId, text, senderId } = data;
+          const { conversationId, text } = data;
 
-          if (!conversationId || !text || !senderId) {
+          if (!conversationId || !text?.trim()) {
             return;
           }
 
           const membership = await prisma.conversationMember.findUnique({
             where: {
               userId_conversationId: {
-                userId: senderId,
+                userId,
                 conversationId,
               },
             },
@@ -60,8 +128,8 @@ export function registerChatSocket(io: Server) {
           const message = await prisma.message.create({
             data: {
               conversationId,
-              senderId,
-              text,
+              senderId: userId,
+              text: text.trim(),
             },
           });
 
@@ -73,7 +141,19 @@ export function registerChatSocket(io: Server) {
     );
 
     socket.on("disconnect", () => {
-      console.log("Socket disconnected:", socket.id);
+      console.log(`Socket disconnected: ${socket.id} | User: ${username}`);
+
+      const currentConnections = onlineUsers.get(userId) ?? 0;
+
+      if (currentConnections <= 1) {
+        onlineUsers.delete(userId);
+
+        socket.broadcast.emit("userOffline", {
+          userId,
+        });
+      } else {
+        onlineUsers.set(userId, currentConnections - 1);
+      }
     });
   });
 }
