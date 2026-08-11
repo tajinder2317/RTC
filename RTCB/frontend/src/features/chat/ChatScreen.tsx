@@ -4,6 +4,7 @@ import MessageInput from "./MessageInput";
 import ConversationList from "./ConversationList";
 import { useChatStore } from "./chatStore";
 import { socket, connectSocket } from "../../services/socket";
+import TypingIndicator from "./TypingIndicator";
 
 type User = {
   id: string;
@@ -33,6 +34,7 @@ export default function ChatScreen() {
   const [conversationId, setConversationId] = useState<string | null>(null);
 
   const messages = useChatStore((state) => state.messages);
+  const typingUser = useChatStore((state) => state.typingUser);
   const setConversation = useChatStore((state) => state.setConversation);
   const setMessages = useChatStore((state) => state.setMessages);
 
@@ -203,6 +205,11 @@ export default function ChatScreen() {
                   })
                 )}
               </div>
+
+              {/* Typing indicator */}
+              {typingUser && typingUser.userId !== currentUser?.id && (
+                <TypingIndicator username={typingUser.username} />
+              )}
 
               {/* Message input */}
               <MessageInput onSend={sendMessage} />
