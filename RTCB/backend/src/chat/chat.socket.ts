@@ -8,10 +8,26 @@ export function registerChatSocket(io: Server) {
     socket.on("joinConversation", async (conversationId: string) => {
       socket.join(conversationId);
 
-      console.log(
-        `Socket ${socket.id} joined conversation ${conversationId}`
-      );
+      console.log(`Socket ${socket.id} joined conversation ${conversationId}`);
     });
+    socket.on(
+      "typing",
+      (data: { conversationId: string; userId: string; username: string }) => {
+        socket.to(data.conversationId).emit("userTyping", {
+          userId: data.userId,
+          username: data.username,
+        });
+      },
+    );
+
+    socket.on(
+      "stopTyping",
+      (data: { conversationId: string; userId: string }) => {
+        socket.to(data.conversationId).emit("userStoppedTyping", {
+          userId: data.userId,
+        });
+      },
+    );
 
     socket.on(
       "sendMessage",
@@ -27,15 +43,14 @@ export function registerChatSocket(io: Server) {
             return;
           }
 
-          const membership =
-            await prisma.conversationMember.findUnique({
-              where: {
-                userId_conversationId: {
-                  userId: senderId,
-                  conversationId,
-                },
+          const membership = await prisma.conversationMember.findUnique({
+            where: {
+              userId_conversationId: {
+                userId: senderId,
+                conversationId,
               },
-            });
+            },
+          });
 
           if (!membership) {
             console.log("User is not a member of this conversation");
@@ -54,7 +69,7 @@ export function registerChatSocket(io: Server) {
         } catch (error) {
           console.error("Send message error:", error);
         }
-      }
+      },
     );
 
     socket.on("disconnect", () => {
