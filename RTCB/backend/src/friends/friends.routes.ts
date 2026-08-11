@@ -1,193 +1,13 @@
-import { prisma } from "./lib/prisma.js";
-import authRoutes from "./auth/auth.routes.js";
-import { registerChatSocket } from "./chat/chat.socket.js";
-import conversationRoutes from "./conversations/conversations.routes.js";
-import messageRoutes from "./messages/messages.routes.js";
-import friendsRoutes from "./friends/friends.routes.js";
-import express from "express";
-import cors from "cors";
-import bcrypt from "bcrypt";
-import { authenticateToken } from "./middleware/authMiddleware.js";
-import type { AuthRequest } from "./middleware/authMiddleware.js";
-import jwt from "jsonwebtoken";
-import { createServer } from "http";
-import { Server } from "socket.io";
-const app = express();
+import { Router } from "express";
+import { prisma } from "../lib/prisma.js";
+import { authenticateToken } from "../middleware/authMiddleware.js";
+import type { AuthRequest } from "../middleware/authMiddleware.js";
 
-app.use(cors());
-app.use(express.json());
-
-app.use("/auth", authRoutes);
-app.use("/conversations", conversationRoutes);
-app.use("/messages", messageRoutes);
-app.use("/friends", friendsRoutes);
-
-app.get("/", (_req, res) => {
-  res.json({
-    message: "Backend is running!",
-  });
-});
-
-app.post("/auth/register", async (req, res) => {
-  try {
-    const { username, email, password } = req.body;
-
-    if (!username || !email || !password) {
-      return res.status(400).json({
-        message: "Username, email and password are required",
-      });
-    }
-
-    const existingUser = await prisma.user.findFirst({
-      where: {
-        OR: [{ username }, { email }],
-      },
-    });
-
-    if (existingUser) {
-      return res.status(409).json({
-        message: "Username or email already exists",
-      });
-    }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-
-    const user = await prisma.user.create({
-      data: {
-        username,
-        email,
-        password: hashedPassword,
-      },
-    });
-
-    res.status(201).json({
-      message: "User registered successfully",
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    console.error("Registration error:", error);
-
-    res.status(500).json({
-      message: "Registration failed",
-      error: String(error),
-    });
-  }
-});
-
-app.post("/auth/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({
-        message: "Email and password are required",
-      });
-    }
-
-    const user = await prisma.user.findUnique({
-      where: {
-        email,
-      },
-    });
-
-    if (!user) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const passwordMatch = await bcrypt.compare(password, user.password);
-
-    if (!passwordMatch) {
-      return res.status(401).json({
-        message: "Invalid email or password",
-      });
-    }
-
-    const token = jwt.sign(
-      {
-        userId: user.id,
-        username: user.username,
-      },
-      process.env.JWT_SECRET!,
-      {
-        expiresIn: "7d",
-      },
-    );
-
-    res.json({
-      message: "Login successful",
-      token,
-      user: {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-      },
-    });
-  } catch (error) {
-    console.error("Login error:", error);
-
-    res.status(500).json({
-      message: "Internal server error",
-      error: String(error),
-    });
-  }
-});
-
-app.get("/auth/me", authenticateToken, (req: AuthRequest, res) => {
-  res.json({
-    message: "You are authenticated",
-    user: req.user,
-  });
-});
-
-// ------------------------------------------------
-
-app.get("/users", authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const currentUserId = req.user!.userId;
-
-    const users = await prisma.user.findMany({
-      where: {
-        id: {
-          not: currentUserId,
-        },
-      },
-      select: {
-        id: true,
-        username: true,
-        email: true,
-      },
-      orderBy: {
-        username: "asc",
-      },
-    });
-
-    return res.json({
-      users,
-    });
-  } catch (error) {
-    console.error("Get users error:", error);
-
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-});
-
-// -------------------------------------
-
-// ============================================================
-// FRIEND SYSTEM
-// ============================================================
+const router = Router();
 
 // Send friend request
-app.post(
-  "/friends/request/:userId",
+router.post(
+  "/request/:userId",
   authenticateToken,
   async (req: AuthRequest, res) => {
     try {
@@ -212,7 +32,6 @@ app.post(
         });
       }
 
-      // Check if friendship already exists
       const existingFriendship = await prisma.friendship.findFirst({
         where: {
           OR: [
@@ -234,7 +53,6 @@ app.post(
         });
       }
 
-      // Check for an existing request in either direction
       const existingRequest = await prisma.friendRequest.findFirst({
         where: {
           OR: [
@@ -257,7 +75,6 @@ app.post(
           });
         }
 
-        // Allow a new request if the previous one was rejected
         if (existingRequest.status === "REJECTED") {
           const updatedRequest = await prisma.friendRequest.update({
             where: {
@@ -299,8 +116,8 @@ app.post(
 );
 
 // Get incoming friend requests
-app.get(
-  "/friends/requests",
+router.get(
+  "/requests",
   authenticateToken,
   async (req: AuthRequest, res) => {
     try {
@@ -339,8 +156,8 @@ app.get(
 );
 
 // Accept friend request
-app.post(
-  "/friends/requests/:requestId/accept",
+router.post(
+  "/requests/:requestId/accept",
   authenticateToken,
   async (req: AuthRequest, res) => {
     try {
@@ -406,8 +223,8 @@ app.post(
 );
 
 // Reject friend request
-app.post(
-  "/friends/requests/:requestId/reject",
+router.post(
+  "/requests/:requestId/reject",
   authenticateToken,
   async (req: AuthRequest, res) => {
     try {
@@ -461,60 +278,64 @@ app.post(
 );
 
 // Get friends
-app.get("/friends", authenticateToken, async (req: AuthRequest, res) => {
-  try {
-    const userId = req.user!.userId;
+router.get(
+  "/",
+  authenticateToken,
+  async (req: AuthRequest, res) => {
+    try {
+      const userId = req.user!.userId;
 
-    const friendships = await prisma.friendship.findMany({
-      where: {
-        OR: [
-          {
-            userAId: userId,
+      const friendships = await prisma.friendship.findMany({
+        where: {
+          OR: [
+            {
+              userAId: userId,
+            },
+            {
+              userBId: userId,
+            },
+          ],
+        },
+        include: {
+          userA: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
           },
-          {
-            userBId: userId,
-          },
-        ],
-      },
-      include: {
-        userA: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
+          userB: {
+            select: {
+              id: true,
+              username: true,
+              email: true,
+            },
           },
         },
-        userB: {
-          select: {
-            id: true,
-            username: true,
-            email: true,
-          },
-        },
-      },
-    });
+      });
 
-    const friends = friendships.map((friendship) => {
-      return friendship.userAId === userId
-        ? friendship.userB
-        : friendship.userA;
-    });
+      const friends = friendships.map((friendship) => {
+        return friendship.userAId === userId
+          ? friendship.userB
+          : friendship.userA;
+      });
 
-    return res.json({
-      friends,
-    });
-  } catch (error) {
-    console.error("Get friends error:", error);
+      return res.json({
+        friends,
+      });
+    } catch (error) {
+      console.error("Get friends error:", error);
 
-    return res.status(500).json({
-      message: "Internal server error",
-    });
-  }
-});
+      return res.status(500).json({
+        message: "Internal server error",
+      });
+    }
+  },
+);
 
 // Remove friend
-app.delete(
-  "/friends/:userId",
+router.delete(
+  "/:userId",
   authenticateToken,
   async (req: AuthRequest, res) => {
     try {
@@ -561,27 +382,4 @@ app.delete(
   },
 );
 
-// API for the conversation part...
-
-// -----------------------------------------
-
-// ------------------------------------------
-
-// ---------------------------------------------------------------
-
-const PORT = 5000;
-
-const httpServer = createServer(app);
-
-const io = new Server(httpServer, {
-  cors: {
-    origin: "http://localhost:5173",
-    methods: ["GET", "POST"],
-  },
-});
-
-registerChatSocket(io);
-
-httpServer.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-});
+export default router;

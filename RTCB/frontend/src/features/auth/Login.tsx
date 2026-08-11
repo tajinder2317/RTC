@@ -1,10 +1,12 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { loginUser } from "../../services/api";
-
+import { useAuthStore } from "./authStore";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const login = useAuthStore((state) => state.login);
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -16,6 +18,8 @@ export default function Login() {
 
     try {
       const data = await loginUser(email, password);
+
+      login(data.token, data.user);
 
       console.log("Login Successful: ", data);
       setMessage("Login Successfull!");
