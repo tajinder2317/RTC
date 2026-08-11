@@ -1,11 +1,11 @@
 import { create } from "zustand";
-import { socket } from "../services/socket";
+import { socket } from "../../services/socket";
 
 export type Message = {
   id: string;
-  content: string;
-  senderId: string;
   conversationId: string;
+  senderId: string;
+  text: string;
   createdAt: string;
 };
 
@@ -23,27 +23,31 @@ export const useChatStore = create<ChatState>((set) => ({
   currentConversationId: null,
   messages: [],
 
-  setConversation: (conversationId) =>
+  setConversation: (conversationId) => {
+    socket.emit("joinConversation", conversationId);
+
     set({
       currentConversationId: conversationId,
       messages: [],
-    }),
+    });
+  },
 
-  setMessages: (messages) =>
-    set({
-      messages,
-    }),
+  setMessages: (messages) => {
+    set({ messages });
+  },
 
-  addMessage: (message) =>
+  addMessage: (message) => {
     set((state) => ({
       messages: [...state.messages, message],
-    })),
+    }));
+  },
 
-  clearMessages: () =>
+  clearMessages: () => {
     set({
-      messages: [],
       currentConversationId: null,
-    }),
+      messages: [],
+    });
+  },
 }));
 
 socket.on("newMessage", (message: Message) => {
