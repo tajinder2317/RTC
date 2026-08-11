@@ -1,16 +1,33 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
+import { loginUser } from "../../services/api";
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    console.log({
-      email,
-      password,
-    });
+    setLoading(true);
+    setMessage("");
+
+    try {
+      const data = await loginUser(email, password);
+
+      console.log("Login Successful: ", data);
+      setMessage("Login Successfull!");
+    } catch (error) {
+      if (error instanceof Error) {
+        setMessage(error.message);
+      } else {
+        setMessage("Login Failed");
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -32,8 +49,13 @@ export default function Login() {
           onChange={(e) => setPassword(e.target.value)}
         />
 
-        <button type="submit">Login</button>
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
       </form>
+
+      {message && <p>{message}</p>}
+
       <p>
         Don't have an account? <Link to="/register">Register</Link>
       </p>
