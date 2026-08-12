@@ -120,6 +120,7 @@ export default function ConversationList({
         const nextMessages = [
           {
             id: message.id,
+            conversationId: message.conversationId,
             text: message.text,
             senderId: message.senderId,
             createdAt: message.createdAt,
@@ -396,7 +397,7 @@ export default function ConversationList({
                 >
                   <strong>{otherUser.username}</strong>
 
-                  {conversation.unreadCount > 0 && (
+                  {(conversation.unreadCount ?? 0) > 0 && (
                     <span
                       style={{
                         background: "#2563eb",
@@ -411,7 +412,7 @@ export default function ConversationList({
                         fontWeight: "bold",
                       }}
                     >
-                      {conversation.unreadCount}
+                      {conversation.unreadCount ?? 0}
                     </span>
                   )}
                 </div>
