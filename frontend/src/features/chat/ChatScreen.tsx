@@ -3,7 +3,7 @@ import { useAuthStore } from "../auth/authStore";
 import MessageInput from "./MessageInput";
 import ConversationList from "./ConversationList";
 import { useChatStore } from "./chatStore";
-import { socket, connectSocket } from "../../services/socket";
+import { socket, connectSocket, disconnectSocket } from "../../services/socket";
 import TypingIndicator from "./TypingIndicator";
 
 type User = {
@@ -12,36 +12,29 @@ type User = {
   email: string;
 };
 
-type Conversation = {
-  id: string;
-  createdAt: string;
-  members: {
-    user: User;
-  }[];
-  messages: {
-    id: string;
-    text: string;
-    senderId: string;
-    createdAt: string;
-  }[];
-};
-
 export default function ChatScreen() {
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
 
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [conversationId, setConversationId] = useState<string | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [creatingConversation, setCreatingConversation] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const currentConversation = useChatStore((state) => state.currentConversation);
+  const currentConversationId = useChatStore(
+    (state) => state.currentConversationId,
+  );
   const messages = useChatStore((state) => state.messages);
   const onlineUsers = useChatStore((state) => state.onlineUsers);
   const typingUser = useChatStore((state) => state.typingUser);
   const setConversation = useChatStore((state) => state.setConversation);
   const setMessages = useChatStore((state) => state.setMessages);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [creatingConversation, setCreatingConversation] = useState(false);
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const selectedUser =
+    currentConversation?.members.find(
+      (member) => member.user.id !== currentUser?.id,
+    )?.user ?? null;
 
   // Connect Socket.IO
   useEffect(() => {
@@ -50,11 +43,11 @@ export default function ChatScreen() {
     connectSocket(token);
 
     return () => {
-      socket.disconnect();
+      disconnectSocket();
     };
   }, [token]);
 
-  // Load users
+  // Load users for the quick chat list on the right
   useEffect(() => {
     if (!token) return;
 
@@ -85,6 +78,71 @@ export default function ChatScreen() {
     fetchUsers();
   }, [token]);
 
+  // Load conversation messages whenever the active conversation changes
+  useEffect(() => {
+    if (!token || !currentConversationId) {
+      setMessages([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/conversations/${currentConversationId}/messages`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to load messages");
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        const existingMessages = useChatStore.getState().messages;
+        const mergedMessages = [
+          ...data.messages,
+          ...existingMessages.filter(
+            (existingMessage) =>
+              !data.messages.some((message: { id: string }) => message.id === existingMessage.id),
+          ),
+        ].sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+        );
+
+        setMessages(mergedMessages);
+
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/conversations/${currentConversationId}/read`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      } catch (error) {
+        console.error("Load messages error:", error);
+      }
+    };
+
+    fetchMessages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentConversationId, setMessages, token]);
+
   // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -93,48 +151,24 @@ export default function ChatScreen() {
   }, [messages]);
 
   // Open an existing conversation
-  const openConversation = async (conversation: Conversation) => {
-    try {
-      const otherUser = conversation.members.find(
-        (member) => member.user.id !== currentUser?.id,
-      )?.user;
-
-      if (!otherUser) return;
-
-      setSelectedUser(otherUser);
-      setConversationId(conversation.id);
-
-      setConversation(conversation.id);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/messages/${conversation.id}`,
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || "Failed to load messages");
-      }
-
-      setMessages(data.messages);
-
-      await fetch(
-        `${import.meta.env.VITE_API_URL}/conversations/${conversation.id}/read`,
-        {
-          method: "POST",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        },
-      );
-    } catch (error) {
-      console.error("Open conversation error:", error);
-    }
+  const openConversation = async (conversation: {
+    id: string;
+    createdAt: string;
+    unreadCount?: number;
+    members: {
+      user: User;
+    }[];
+    messages: {
+      id: string;
+      conversationId: string;
+      senderId: string;
+      text: string;
+      createdAt: string;
+      deliveredAt?: string | null;
+      readAt?: string | null;
+    }[];
+  }) => {
+    setConversation(conversation);
   };
 
   // Create or get conversation with a user
@@ -164,9 +198,7 @@ export default function ChatScreen() {
         throw new Error(data.message || "Failed to create conversation");
       }
 
-      const conversation: Conversation = data.conversation;
-
-      await openConversation(conversation);
+      await openConversation(data.conversation);
     } catch (error) {
       console.error("Start conversation error:", error);
     } finally {
@@ -176,12 +208,12 @@ export default function ChatScreen() {
 
   // Send message
   const sendMessage = (text: string) => {
-    if (!conversationId || !currentUser) {
+    if (!currentConversationId || !currentUser) {
       return;
     }
 
     socket.emit("sendMessage", {
-      conversationId,
+      conversationId: currentConversationId,
       text,
     });
   };
@@ -227,7 +259,7 @@ export default function ChatScreen() {
           <div style={{ padding: "10px 20px" }}>
             <ConversationList
               onSelectConversation={openConversation}
-              currentConversationId={conversationId}
+              currentConversationId={currentConversationId}
             />
           </div>
 
@@ -297,7 +329,7 @@ export default function ChatScreen() {
             minHeight: "500px",
           }}
         >
-          {!selectedUser ? (
+          {!selectedUser || !currentConversationId ? (
             <div style={{ padding: "30px" }}>
               <h2>Select a conversation</h2>
               <p>

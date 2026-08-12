@@ -1,27 +1,8 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../auth/authStore";
 import { socket } from "../../services/socket";
-
-type User = {
-  id: string;
-  username: string;
-  email: string;
-};
-
-type Conversation = {
-  id: string;
-  createdAt: string;
-  unreadCount: number;
-  members: {
-    user: User;
-  }[];
-  messages: {
-    id: string;
-    text: string;
-    senderId: string;
-    createdAt: string;
-  }[];
-};
+import { getUsers, createConversation } from "../../services/api";
+import type { Conversation, ChatUser } from "./chatStore";
 
 type ConversationListProps = {
   onSelectConversation: (conversation: Conversation) => void;
@@ -36,11 +17,24 @@ export default function ConversationList({
   const currentUser = useAuthStore((state) => state.user);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [users, setUsers] = useState<ChatUser[]>([]);
 
-  // Fetch conversations
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [startingChat, setStartingChat] = useState<string | null>(null);
+
+  // =========================
+  // FETCH CONVERSATIONS
+  // =========================
+
   useEffect(() => {
     const fetchConversations = async () => {
+      if (!token) {
+        setLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch(
           `${import.meta.env.VITE_API_URL}/conversations`,
@@ -54,9 +48,7 @@ export default function ConversationList({
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch conversations",
-          );
+          throw new Error(data.message || "Failed to fetch conversations");
         }
 
         setConversations(data.conversations);
@@ -67,12 +59,40 @@ export default function ConversationList({
       }
     };
 
-    if (token) {
-      fetchConversations();
-    }
+    fetchConversations();
   }, [token]);
 
-  // Real-time message updates
+  // =========================
+  // FETCH USERS
+  // =========================
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      if (!token) {
+        setUsersLoading(false);
+        return;
+      }
+
+      try {
+        setUsersLoading(true);
+
+        const data = await getUsers(token);
+
+        setUsers(data);
+      } catch (error) {
+        console.error("Fetch users error:", error);
+      } finally {
+        setUsersLoading(false);
+      }
+    };
+
+    fetchUsers();
+  }, [token]);
+
+  // =========================
+  // REAL-TIME MESSAGE UPDATES
+  // =========================
+
   useEffect(() => {
     const handleNewMessage = (message: {
       id: string;
@@ -81,49 +101,41 @@ export default function ConversationList({
       text: string;
       createdAt: string;
     }) => {
-      // Ignore our own messages
-      if (message.senderId === currentUser?.id) {
-        return;
-      }
-
       setConversations((prev) => {
-        const conversation = prev.find(
-          (item) => item.id === message.conversationId,
-        );
+      const conversation = prev.find(
+            (item) => item.id === message.conversationId,
+          );
 
-        // Conversation isn't currently in sidebar
         if (!conversation) {
           return prev;
         }
 
-        const isCurrentConversation =
-          conversation.id === currentConversationId;
+        const isCurrentConversation = conversation.id === currentConversationId;
+        const isMine = message.senderId === currentUser?.id;
+        const nextUnreadCount =
+          isCurrentConversation || isMine
+            ? 0
+            : (conversation.unreadCount ?? 0) + 1;
+
+        const nextMessages = [
+          {
+            id: message.id,
+            text: message.text,
+            senderId: message.senderId,
+            createdAt: message.createdAt,
+          },
+          ...conversation.messages.filter((item) => item.id !== message.id),
+        ];
 
         const updatedConversation: Conversation = {
           ...conversation,
-
-          // Don't count messages while user is viewing the conversation
-          unreadCount: isCurrentConversation
-            ? 0
-            : conversation.unreadCount + 1,
-
-          // Update latest message
-          messages: [
-            {
-              id: message.id,
-              text: message.text,
-              senderId: message.senderId,
-              createdAt: message.createdAt,
-            },
-          ],
+          unreadCount: nextUnreadCount,
+          messages: nextMessages,
         };
 
-        // Move conversation to the top
         return [
           updatedConversation,
-          ...prev.filter(
-            (item) => item.id !== message.conversationId,
-          ),
+          ...prev.filter((item) => item.id !== message.conversationId),
         ];
       });
     };
@@ -135,14 +147,21 @@ export default function ConversationList({
     };
   }, [currentUser?.id, currentConversationId]);
 
+  // =========================
+  // GET OTHER USER
+  // =========================
+
   const getOtherUser = (conversation: Conversation) => {
     return conversation.members.find(
       (member) => member.user.id !== currentUser?.id,
     )?.user;
   };
 
+  // =========================
+  // OPEN EXISTING CONVERSATION
+  // =========================
+
   const handleSelectConversation = (conversation: Conversation) => {
-    // Immediately clear unread badge
     setConversations((prev) =>
       prev.map((item) =>
         item.id === conversation.id
@@ -157,79 +176,263 @@ export default function ConversationList({
     onSelectConversation(conversation);
   };
 
-  if (loading) {
-    return <p>Loading conversations...</p>;
-  }
+  // =========================
+  // START NEW CHAT
+  // =========================
 
-  if (conversations.length === 0) {
-    return <p>No conversations yet.</p>;
+  const handleStartChat = async (user: ChatUser) => {
+    if (!token) return;
+
+    try {
+      setStartingChat(user.id);
+
+      const conversation = await createConversation(token, user.id);
+
+      // Check if it already exists in the sidebar
+      setConversations((prev) => {
+        const exists = prev.some((item) => item.id === conversation.id);
+
+        if (exists) {
+          return prev.map((item) =>
+            item.id === conversation.id
+              ? {
+                  ...item,
+                  unreadCount: 0,
+                }
+              : item,
+          );
+        }
+
+        return [
+          {
+            ...conversation,
+            unreadCount: 0,
+            messages: conversation.messages || [],
+          },
+          ...prev,
+        ];
+      });
+
+      // Open the chat immediately
+      onSelectConversation({
+        ...conversation,
+        unreadCount: 0,
+        messages: conversation.messages || [],
+      });
+
+      // Clear search
+      setSearch("");
+    } catch (error) {
+      console.error("Start chat error:", error);
+    } finally {
+      setStartingChat(null);
+    }
+  };
+
+  // =========================
+  // SEARCH
+  // =========================
+
+  const filteredUsers = users.filter((user) =>
+    user.username.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  if (loading) {
+    return <p style={{ padding: "15px" }}>Loading conversations...</p>;
   }
 
   return (
     <div>
-      {conversations.map((conversation) => {
-        const otherUser = getOtherUser(conversation);
-        const lastMessage = conversation.messages[0];
+      {/* ========================= */}
+      {/* SEARCH USERS */}
+      {/* ========================= */}
 
-        if (!otherUser) {
-          return null;
-        }
+      <div
+        style={{
+          padding: "12px",
+          borderBottom: "1px solid #ddd",
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Search users..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          style={{
+            width: "100%",
+            boxSizing: "border-box",
+            padding: "10px 12px",
+            border: "1px solid #ddd",
+            borderRadius: "8px",
+            outline: "none",
+            fontSize: "14px",
+          }}
+        />
 
-        return (
+        {/* Search results */}
+
+        {search.trim() && (
           <div
-            key={conversation.id}
-            onClick={() =>
-              handleSelectConversation(conversation)
-            }
             style={{
-              padding: "15px",
-              borderBottom: "1px solid #ddd",
-              cursor: "pointer",
+              marginTop: "8px",
+              maxHeight: "200px",
+              overflowY: "auto",
             }}
           >
-            <div
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-              }}
-            >
-              <strong>{otherUser.username}</strong>
-
-              {conversation.unreadCount > 0 && (
-                <span
+            {usersLoading ? (
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#666",
+                }}
+              >
+                Loading users...
+              </p>
+            ) : filteredUsers.length === 0 ? (
+              <p
+                style={{
+                  fontSize: "14px",
+                  color: "#666",
+                }}
+              >
+                No users found
+              </p>
+            ) : (
+              filteredUsers.map((user) => (
+                <div
+                  key={user.id}
                   style={{
-                    background: "#2563eb",
-                    color: "white",
-                    borderRadius: "999px",
-                    minWidth: "22px",
-                    height: "22px",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "12px",
-                    fontWeight: "bold",
+                    justifyContent: "space-between",
+                    padding: "10px 5px",
+                    borderBottom: "1px solid #eee",
                   }}
                 >
-                  {conversation.unreadCount}
-                </span>
-              )}
-            </div>
+                  <div>
+                    <strong
+                      style={{
+                        display: "block",
+                        fontSize: "14px",
+                      }}
+                    >
+                      {user.username}
+                    </strong>
 
-            <div
-              style={{
-                color: "#666",
-                fontSize: "14px",
-                marginTop: "5px",
-              }}
-            >
-              {lastMessage
-                ? lastMessage.text
-                : "No messages yet"}
-            </div>
+                    <span
+                      style={{
+                        fontSize: "12px",
+                        color: "#777",
+                      }}
+                    >
+                      {user.email}
+                    </span>
+                  </div>
+
+                  <button
+                    onClick={() => handleStartChat(user)}
+                    disabled={startingChat === user.id}
+                    style={{
+                      border: "none",
+                      background: "#2563eb",
+                      color: "white",
+                      borderRadius: "6px",
+                      padding: "7px 10px",
+                      cursor: "pointer",
+                      fontSize: "12px",
+                    }}
+                  >
+                    {startingChat === user.id ? "..." : "Chat"}
+                  </button>
+                </div>
+              ))
+            )}
           </div>
-        );
-      })}
+        )}
+      </div>
+
+      {/* ========================= */}
+      {/* CONVERSATIONS */}
+      {/* ========================= */}
+
+      {conversations.length === 0 ? (
+        <p
+          style={{
+            padding: "15px",
+            color: "#666",
+          }}
+        >
+          No conversations yet.
+        </p>
+      ) : (
+        <div>
+          {conversations.map((conversation) => {
+            const otherUser = getOtherUser(conversation);
+            const lastMessage = conversation.messages[0];
+
+            if (!otherUser) {
+              return null;
+            }
+
+            const isSelected = conversation.id === currentConversationId;
+
+            return (
+              <div
+                key={conversation.id}
+                onClick={() => handleSelectConversation(conversation)}
+                style={{
+                  padding: "15px",
+                  borderBottom: "1px solid #ddd",
+                  cursor: "pointer",
+                  background: isSelected ? "#eff6ff" : "white",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <strong>{otherUser.username}</strong>
+
+                  {conversation.unreadCount > 0 && (
+                    <span
+                      style={{
+                        background: "#2563eb",
+                        color: "white",
+                        borderRadius: "999px",
+                        minWidth: "22px",
+                        height: "22px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "12px",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {conversation.unreadCount}
+                    </span>
+                  )}
+                </div>
+
+                <div
+                  style={{
+                    color: "#666",
+                    fontSize: "14px",
+                    marginTop: "5px",
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                  }}
+                >
+                  {lastMessage ? lastMessage.text : "No messages yet"}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 }

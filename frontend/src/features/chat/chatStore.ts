@@ -2,6 +2,12 @@ import { create } from "zustand";
 import { socket } from "../../services/socket";
 import { useAuthStore } from "../auth/authStore";
 
+export type ChatUser = {
+  id: string;
+  username: string;
+  email: string;
+};
+
 export type Message = {
   id: string;
   conversationId: string;
@@ -12,8 +18,19 @@ export type Message = {
   readAt?: string | null;
 };
 
+export type Conversation = {
+  id: string;
+  createdAt: string;
+  unreadCount?: number;
+  members: {
+    user: ChatUser;
+  }[];
+  messages: Message[];
+};
+
 type ChatState = {
   currentConversationId: string | null;
+  currentConversation: Conversation | null;
   messages: Message[];
   typingUser: {
     userId: string;
@@ -24,7 +41,7 @@ type ChatState = {
 
   setUserOnline: (userId: string) => void;
   setUserOffline: (userId: string) => void;
-  setConversation: (conversationId: string) => void;
+  setConversation: (conversation: Conversation | null) => void;
   setMessages: (messages: Message[]) => void;
   addMessage: (message: Message) => void;
   setTypingUser: (user: { userId: string; username: string } | null) => void;
@@ -33,26 +50,62 @@ type ChatState = {
 
 export const useChatStore = create<ChatState>((set) => ({
   currentConversationId: null,
+  currentConversation: null,
   messages: [],
   typingUser: null,
   onlineUsers: [],
 
-  setConversation: (conversationId) => {
-    socket.emit("joinConversation", conversationId);
+  setConversation: (conversation) => {
+    if (!conversation) {
+      set({
+        currentConversationId: null,
+        currentConversation: null,
+        messages: [],
+        typingUser: null,
+      });
+
+      return;
+    }
+
+    socket.emit("joinConversation", conversation.id);
 
     set({
-      currentConversationId: conversationId,
-      messages: [],
+      currentConversationId: conversation.id,
+      currentConversation: {
+        ...conversation,
+        messages: conversation.messages ?? [],
+      },
+      messages: conversation.messages ?? [],
     });
   },
 
   setMessages: (messages) => {
-    set({ messages });
+    set((state) => ({
+      messages,
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages,
+          }
+        : state.currentConversation,
+    }));
   },
 
   addMessage: (message) => {
     set((state) => ({
-      messages: [...state.messages, message],
+      messages: state.messages.some((item) => item.id === message.id)
+        ? state.messages
+        : [...state.messages, message],
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages: state.currentConversation.messages.some(
+              (item) => item.id === message.id,
+            )
+              ? state.currentConversation.messages
+              : [...state.currentConversation.messages, message],
+          }
+        : state.currentConversation,
     }));
   },
 
@@ -65,6 +118,7 @@ export const useChatStore = create<ChatState>((set) => ({
   clearMessages: () => {
     set({
       currentConversationId: null,
+      currentConversation: null,
       messages: [],
       typingUser: null,
     });
@@ -135,6 +189,19 @@ socket.on(
             }
           : message,
       ),
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages: state.currentConversation.messages.map((message) =>
+              message.id === messageId
+                ? {
+                    ...message,
+                    deliveredAt,
+                  }
+                : message,
+            ),
+          }
+        : state.currentConversation,
     }));
   },
 );

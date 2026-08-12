@@ -1,11 +1,16 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../../services/api";
+import { loginUser } from "../../services/api";
+import { useAuthStore } from "./authStore";
 
 export default function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+
+  const login = useAuthStore((state) => state.login);
+  const navigate = useNavigate();
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
@@ -19,8 +24,14 @@ export default function Register() {
     try {
       const data = await registerUser(username, email, password);
 
-      console.log("Registration successful:", data);
-      setMessage("Registration successful!");
+      if (data?.token && data?.user) {
+        login(data.token, data.user);
+      } else {
+        const loginData = await loginUser(email, password);
+        login(loginData.token, loginData.user);
+      }
+
+      navigate("/chat", { replace: true });
     } catch (error) {
       if (error instanceof Error) {
         setMessage(error.message);

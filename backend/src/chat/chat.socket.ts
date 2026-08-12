@@ -145,83 +145,48 @@ export function registerChatSocket(io: Server) {
           }
 
           io.to(`user:${userId}`).emit("newMessage", message);
-          socket.on("messageDelivered", async (data: { messageId: string }) => {
-            try {
-              const { messageId } = data;
-
-              const message = await prisma.message.findUnique({
-                where: {
-                  id: messageId,
-                },
-              });
-
-              if (!message) {
-                return;
-              }
-
-              // Don't allow the sender to mark their own message delivered
-              if (message.senderId === userId) {
-                return;
-              }
-
-              const updatedMessage = await prisma.message.update({
-                where: {
-                  id: messageId,
-                },
-                data: {
-                  deliveredAt: new Date(),
-                },
-              });
-
-              io.to(`user:${message.senderId}`).emit("messageDelivered", {
-                messageId: updatedMessage.id,
-                deliveredAt: updatedMessage.deliveredAt,
-              });
-            } catch (error) {
-              console.error("Message delivery error:", error);
-            }
-          });
-          socket.on("messageDelivered", async (data: { messageId: string }) => {
-            try {
-              const { messageId } = data;
-
-              const message = await prisma.message.findUnique({
-                where: {
-                  id: messageId,
-                },
-              });
-
-              if (!message) {
-                return;
-              }
-
-              // Don't allow the sender to mark their own message delivered
-              if (message.senderId === userId) {
-                return;
-              }
-
-              const updatedMessage = await prisma.message.update({
-                where: {
-                  id: messageId,
-                },
-                data: {
-                  deliveredAt: new Date(),
-                },
-              });
-
-              io.to(`user:${message.senderId}`).emit("messageDelivered", {
-                messageId: updatedMessage.id,
-                deliveredAt: updatedMessage.deliveredAt,
-              });
-            } catch (error) {
-              console.error("Message delivery error:", error);
-            }
-          });
         } catch (error) {
           console.error("Send message error:", error);
         }
       },
     );
+
+    socket.on("messageDelivered", async (data: { messageId: string }) => {
+      try {
+        const { messageId } = data;
+
+        const message = await prisma.message.findUnique({
+          where: {
+            id: messageId,
+          },
+        });
+
+        if (!message) {
+          return;
+        }
+
+        // Don't allow the sender to mark their own message delivered
+        if (message.senderId === userId) {
+          return;
+        }
+
+        const updatedMessage = await prisma.message.update({
+          where: {
+            id: messageId,
+          },
+          data: {
+            deliveredAt: new Date(),
+          },
+        });
+
+        io.to(`user:${message.senderId}`).emit("messageDelivered", {
+          messageId: updatedMessage.id,
+          deliveredAt: updatedMessage.deliveredAt,
+        });
+      } catch (error) {
+        console.error("Message delivery error:", error);
+      }
+    });
 
     socket.on("disconnect", () => {
       console.log(`Socket disconnected: ${socket.id} | User: ${username}`);
