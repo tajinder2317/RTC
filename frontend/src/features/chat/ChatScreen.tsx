@@ -39,6 +39,22 @@ export default function ChatScreen() {
   const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const readReceiptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastReadReceiptSignatureRef = useRef<string | null>(null);
+
+  const unreadIncomingMessageIds = messages
+    .filter(
+      (message) =>
+        message.conversationId === currentConversationId &&
+        message.senderId !== currentUser?.id &&
+        !message.readAt,
+    )
+    .map((message) => message.id);
+
+  const unreadIncomingSignature =
+    unreadIncomingMessageIds.length > 0 && currentConversationId
+      ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
+      : null;
 
   const selectedUser =
     currentConversation?.members.find(
@@ -156,16 +172,6 @@ export default function ChatScreen() {
         );
 
         setMessages(mergedMessages);
-
-        await fetch(
-          `${import.meta.env.VITE_API_URL}/conversations/${currentConversationId}/read`,
-          {
-            method: "POST",
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
       } catch (error) {
         console.error("Load messages error:", error);
       }
@@ -177,6 +183,46 @@ export default function ChatScreen() {
       cancelled = true;
     };
   }, [currentConversationId, setMessages, token]);
+
+  useEffect(() => {
+    if (readReceiptTimerRef.current) {
+      clearTimeout(readReceiptTimerRef.current);
+      readReceiptTimerRef.current = null;
+    }
+
+    if (!token || !currentConversationId || !currentUser) {
+      lastReadReceiptSignatureRef.current = null;
+      return;
+    }
+
+    if (!unreadIncomingSignature) {
+      lastReadReceiptSignatureRef.current = null;
+      return;
+    }
+
+    if (lastReadReceiptSignatureRef.current === unreadIncomingSignature) {
+      return;
+    }
+
+    lastReadReceiptSignatureRef.current = unreadIncomingSignature;
+    readReceiptTimerRef.current = setTimeout(() => {
+      socket.emit("conversation:read", {
+        conversationId: currentConversationId,
+      });
+    }, 100);
+
+    return () => {
+      if (readReceiptTimerRef.current) {
+        clearTimeout(readReceiptTimerRef.current);
+        readReceiptTimerRef.current = null;
+      }
+    };
+  }, [
+    currentConversationId,
+    currentUser?.id,
+    token,
+    unreadIncomingSignature,
+  ]);
 
   useEffect(() => {
     if (!currentConversationId) {
@@ -505,6 +551,11 @@ export default function ChatScreen() {
                 ) : (
                   messages.map((message) => {
                     const isMine = message.senderId === currentUser?.id;
+                    const messageStatus = message.readAt
+                      ? "✓✓ Read"
+                      : message.deliveredAt
+                        ? "✓✓ Delivered"
+                        : "✓ Sent";
 
                     return (
                       <div
@@ -520,10 +571,23 @@ export default function ChatScreen() {
                             padding: "10px 14px",
                             background: isMine ? "#dbeafe" : "#f1f1f1",
                             borderRadius: "8px",
-                            maxWidth: "70%",
-                          }}
-                        >
-                          {message.text}
+                          maxWidth: "70%",
+                        }}
+                      >
+                          <div>{message.text}</div>
+
+                          {isMine && (
+                            <div
+                              style={{
+                                marginTop: "4px",
+                                fontSize: "12px",
+                                color: "#6b7280",
+                                textAlign: "right",
+                              }}
+                            >
+                              {messageStatus}
+                            </div>
+                          )}
                         </div>
                       </div>
                     );

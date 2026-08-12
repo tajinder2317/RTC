@@ -140,6 +140,49 @@ socket.on("newMessage", (message: Message) => {
     });
   }
 });
+
+socket.on(
+  "message:read",
+  ({
+    conversationId,
+    messageIds,
+    readAt,
+  }: {
+    conversationId: string;
+    messageIds: string[];
+    readAt: string;
+  }) => {
+    const currentConversationId = useChatStore.getState().currentConversationId;
+
+    if (conversationId !== currentConversationId || messageIds.length === 0) {
+      return;
+    }
+
+    useChatStore.setState((state) => ({
+      messages: state.messages.map((message) =>
+        messageIds.includes(message.id)
+          ? {
+              ...message,
+              readAt,
+            }
+          : message,
+      ),
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages: state.currentConversation.messages.map((message) =>
+              messageIds.includes(message.id)
+                ? {
+                    ...message,
+                    readAt,
+                  }
+                : message,
+            ),
+          }
+        : state.currentConversation,
+    }));
+  },
+);
 socket.on(
   "messageDelivered",
   ({ messageId, deliveredAt }: { messageId: string; deliveredAt: string }) => {

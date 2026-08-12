@@ -230,17 +230,48 @@ router.post(
         });
       }
 
-      await prisma.conversationMember.update({
+      const unreadMessages = await prisma.message.findMany({
         where: {
-          userId_conversationId: {
-            userId,
-            conversationId,
+          conversationId,
+          senderId: {
+            not: userId,
           },
+          readAt: null,
         },
-        data: {
-          lastReadAt: new Date(),
+        select: {
+          id: true,
         },
       });
+
+      const readAt = new Date();
+
+      await prisma.$transaction([
+        prisma.conversationMember.update({
+          where: {
+            userId_conversationId: {
+              userId,
+              conversationId,
+            },
+          },
+          data: {
+            lastReadAt: readAt,
+          },
+        }),
+        ...(unreadMessages.length > 0
+          ? [
+              prisma.message.updateMany({
+                where: {
+                  id: {
+                    in: unreadMessages.map((message) => message.id),
+                  },
+                },
+                data: {
+                  readAt,
+                },
+              }),
+            ]
+          : []),
+      ]);
 
       return res.json({
         message: "Conversation marked as read",

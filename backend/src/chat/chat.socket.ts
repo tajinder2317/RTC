@@ -133,6 +133,105 @@ export function registerChatSocket(io: Server) {
     });
 
     socket.on(
+      "conversation:read",
+      async (data: { conversationId: string }) => {
+        try {
+          const conversationId = data?.conversationId;
+
+          if (!conversationId) {
+            return;
+          }
+
+          const membership = await prisma.conversationMember.findUnique({
+            where: {
+              userId_conversationId: {
+                userId,
+                conversationId,
+              },
+            },
+          });
+
+          if (!membership) {
+            console.log("User is not a member of this conversation");
+            return;
+          }
+
+          const unreadMessages = await prisma.message.findMany({
+            where: {
+              conversationId,
+              senderId: {
+                not: userId,
+              },
+              readAt: null,
+            },
+            select: {
+              id: true,
+              senderId: true,
+            },
+          });
+
+          const readAt = new Date();
+          const messageIds = unreadMessages.map((message) => message.id);
+
+          await prisma.$transaction([
+            prisma.conversationMember.update({
+              where: {
+                userId_conversationId: {
+                  userId,
+                  conversationId,
+                },
+              },
+              data: {
+                lastReadAt: readAt,
+              },
+            }),
+            ...(messageIds.length > 0
+              ? [
+                  prisma.message.updateMany({
+                    where: {
+                      id: {
+                        in: messageIds,
+                      },
+                    },
+                    data: {
+                      readAt,
+                    },
+                  }),
+                ]
+              : []),
+          ]);
+
+          if (messageIds.length === 0) {
+            return;
+          }
+
+          const payload = {
+            conversationId,
+            messageIds,
+            readAt: readAt.toISOString(),
+            readBy: userId,
+          };
+
+          io.to(`user:${userId}`).emit("message:read", payload);
+
+          const senderIds = Array.from(
+            new Set(
+              unreadMessages
+                .map((message) => message.senderId)
+                .filter((senderId) => senderId !== userId),
+            ),
+          );
+
+          for (const senderId of senderIds) {
+            io.to(`user:${senderId}`).emit("message:read", payload);
+          }
+        } catch (error) {
+          console.error("Conversation read error:", error);
+        }
+      },
+    );
+
+    socket.on(
       "sendMessage",
       async (data: { conversationId: string; text: string }) => {
         try {
