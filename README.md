@@ -1,4 +1,4 @@
-# RTCB — Real-Time Chat
+# RTC — Real-Time Chat
 
 A full-stack real-time chat application built with React, Node.js, Express, Socket.IO, Prisma, and PostgreSQL.
 
