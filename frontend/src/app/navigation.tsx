@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import Login from "../features/auth/Login";
 import Register from "../features/auth/Register";
 import ChatScreen from "../features/chat/ChatScreen";
+import Friends from "../features/friends/Friends";
 import ProtectedRoute from "./ProtectedRoute";
 
 export default function Navigation() {
@@ -18,6 +19,15 @@ export default function Navigation() {
           element={
             <ProtectedRoute>
               <ChatScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/friends"
+          element={
+            <ProtectedRoute>
+              <Friends />
             </ProtectedRoute>
           }
         />

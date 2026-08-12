@@ -3,6 +3,7 @@ import { useAuthStore } from "../auth/authStore";
 import { socket } from "../../services/socket";
 import { getUsers, createConversation } from "../../services/api";
 import type { Conversation, ChatUser } from "./chatStore";
+import { usePresenceStore } from "../presence/presenceStore";
 
 type ConversationListProps = {
   onSelectConversation: (conversation: Conversation) => void;
@@ -15,6 +16,7 @@ export default function ConversationList({
 }: ConversationListProps) {
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
+  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -370,6 +372,7 @@ export default function ConversationList({
           {conversations.map((conversation) => {
             const otherUser = getOtherUser(conversation);
             const lastMessage = conversation.messages[0];
+            const isOnline = otherUser ? onlineUserIds.includes(otherUser.id) : false;
 
             if (!otherUser) {
               return null;
@@ -395,7 +398,19 @@ export default function ConversationList({
                     alignItems: "center",
                   }}
                 >
-                  <strong>{otherUser.username}</strong>
+                  <div>
+                    <strong>{otherUser.username}</strong>
+
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: isOnline ? "#16a34a" : "#6b7280",
+                        marginTop: "3px",
+                      }}
+                    >
+                      {isOnline ? "🟢 Online" : "⚫ Offline"}
+                    </div>
+                  </div>
 
                   {(conversation.unreadCount ?? 0) > 0 && (
                     <span

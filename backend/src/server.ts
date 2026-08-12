@@ -10,6 +10,7 @@ import friendsRoutes from "./friends/friends.routes.js";
 import conversationRoutes from "./conversations/conversations.routes.js";
 import messageRoutes from "./messages/messages.routes.js";
 import { registerChatSocket } from "./chat/chat.socket.js";
+import { registerFriendsSocket } from "./friends/friends.socket.js";
 
 const app = express();
 
@@ -48,6 +49,7 @@ const io = new Server(httpServer, {
 });
 
 registerChatSocket(io);
+registerFriendsSocket(io);
 
 httpServer.listen(PORT, "0.0.0.0", () => {
   console.log(`Server running on port ${PORT}`);

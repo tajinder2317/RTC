@@ -2,7 +2,7 @@ import type { Server, Socket } from "socket.io";
 import jwt from "jsonwebtoken";
 import { prisma } from "../lib/prisma.js";
 
-const onlineUsers = new Map<string, number>();
+const activeConnections = new Map<string, Set<string>>();
 
 type JwtPayload = {
   userId: string;
@@ -35,19 +35,30 @@ export function registerChatSocket(io: Server) {
     const userId = socket.data.userId;
     const username = socket.data.username;
 
-    const currentConnections = onlineUsers.get(userId) ?? 0;
+    const userConnections = activeConnections.get(userId) ?? new Set<string>();
+    const wasOffline = userConnections.size === 0;
 
-    onlineUsers.set(userId, currentConnections + 1);
+    userConnections.add(socket.id);
+    activeConnections.set(userId, userConnections);
 
-    if (currentConnections === 0) {
+    const onlineUserIds = Array.from(activeConnections.keys());
+
+    socket.emit("presence:state", {
+      onlineUserIds,
+    });
+    socket.emit("onlineUsers", {
+      userIds: onlineUserIds,
+    });
+
+    if (wasOffline) {
+      socket.broadcast.emit("presence:online", {
+        userId,
+      });
       socket.broadcast.emit("userOnline", {
         userId,
         username,
       });
     }
-    socket.emit("onlineUsers", {
-      userIds: Array.from(onlineUsers.keys()),
-    });
 
     console.log(
       `Socket connected: ${socket.id} | User: ${username} (${userId})`,
@@ -82,15 +93,41 @@ export function registerChatSocket(io: Server) {
       }
     });
 
+    socket.on("leaveConversation", async (conversationId: string) => {
+      try {
+        if (!conversationId) {
+          return;
+        }
+
+        socket.leave(conversationId);
+
+        console.log(
+          `Socket ${socket.id} left conversation ${conversationId}`,
+        );
+      } catch (error) {
+        console.error("Leave conversation error:", error);
+      }
+    });
+
     socket.on("typing", (data: { conversationId: string }) => {
+      if (!data?.conversationId) {
+        return;
+      }
+
       socket.to(data.conversationId).emit("userTyping", {
+        conversationId: data.conversationId,
         userId,
         username,
       });
     });
 
     socket.on("stopTyping", (data: { conversationId: string }) => {
+      if (!data?.conversationId) {
+        return;
+      }
+
       socket.to(data.conversationId).emit("userStoppedTyping", {
+        conversationId: data.conversationId,
         userId,
       });
     });
@@ -191,17 +228,26 @@ export function registerChatSocket(io: Server) {
     socket.on("disconnect", () => {
       console.log(`Socket disconnected: ${socket.id} | User: ${username}`);
 
-      const currentConnections = onlineUsers.get(userId) ?? 0;
+      const userConnections = activeConnections.get(userId);
 
-      if (currentConnections <= 1) {
-        onlineUsers.delete(userId);
-
-        socket.broadcast.emit("userOffline", {
-          userId,
-        });
-      } else {
-        onlineUsers.set(userId, currentConnections - 1);
+      if (!userConnections) {
+        return;
       }
+
+      userConnections.delete(socket.id);
+
+      if (userConnections.size > 0) {
+        return;
+      }
+
+      activeConnections.delete(userId);
+
+      socket.broadcast.emit("presence:offline", {
+        userId,
+      });
+      socket.broadcast.emit("userOffline", {
+        userId,
+      });
     });
   });
 }

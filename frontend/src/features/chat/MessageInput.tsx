@@ -16,6 +16,25 @@ export default function MessageInput({ onSend }: MessageInputProps) {
   const conversationId = useChatStore((state) => state.currentConversationId);
 
   const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
+
+  const stopTyping = () => {
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current);
+      typingTimeout.current = null;
+    }
+
+    if (!conversationId || !currentUser || !isTypingRef.current) {
+      return;
+    }
+
+    socket.emit("stopTyping", {
+      conversationId,
+      userId: currentUser.id,
+    });
+
+    isTypingRef.current = false;
+  };
 
   const handleChange = (value: string) => {
     setMessage(value);
@@ -24,22 +43,30 @@ export default function MessageInput({ onSend }: MessageInputProps) {
       return;
     }
 
-    socket.emit("typing", {
-      conversationId,
-      userId: currentUser.id,
-      username: currentUser.username,
-    });
+    const hasText = value.trim().length > 0;
+
+    if (!hasText) {
+      stopTyping();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      socket.emit("typing", {
+        conversationId,
+        userId: currentUser.id,
+        username: currentUser.username,
+      });
+
+      isTypingRef.current = true;
+    }
 
     if (typingTimeout.current) {
       clearTimeout(typingTimeout.current);
     }
 
     typingTimeout.current = setTimeout(() => {
-      socket.emit("stopTyping", {
-        conversationId,
-        userId: currentUser.id,
-      });
-    }, 1000);
+      stopTyping();
+    }, 1200);
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -53,31 +80,14 @@ export default function MessageInput({ onSend }: MessageInputProps) {
 
     onSend(trimmedMessage);
     setMessage("");
-
-    if (typingTimeout.current) {
-      clearTimeout(typingTimeout.current);
-    }
-
-    if (conversationId && currentUser) {
-      socket.emit("stopTyping", {
-        conversationId,
-        userId: currentUser.id,
-      });
-    }
+    stopTyping();
   };
 
   useEffect(() => {
-    return () => {
-      if (typingTimeout.current) {
-        clearTimeout(typingTimeout.current);
-      }
+    isTypingRef.current = false;
 
-      if (conversationId && currentUser) {
-        socket.emit("stopTyping", {
-          conversationId,
-          userId: currentUser.id,
-        });
-      }
+    return () => {
+      stopTyping();
     };
   }, [conversationId, currentUser]);
 
@@ -96,6 +106,7 @@ export default function MessageInput({ onSend }: MessageInputProps) {
         type="text"
         value={message}
         onChange={(e) => handleChange(e.target.value)}
+        onBlur={stopTyping}
         placeholder="Type a message..."
         style={{
           flex: 1,

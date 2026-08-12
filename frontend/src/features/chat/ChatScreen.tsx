@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../auth/authStore";
 import MessageInput from "./MessageInput";
 import ConversationList from "./ConversationList";
 import { useChatStore } from "./chatStore";
-import { socket, connectSocket, disconnectSocket } from "../../services/socket";
+import { socket } from "../../services/socket";
 import TypingIndicator from "./TypingIndicator";
+import { getFriendRequests } from "../../services/api";
+import { subscribeToFriendEvents } from "../friends/friendsRealtime";
+import { usePresenceStore } from "../presence/presenceStore";
 
 type User = {
   id: string;
@@ -15,19 +19,24 @@ type User = {
 export default function ChatScreen() {
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
+  const navigate = useNavigate();
 
   const currentConversation = useChatStore((state) => state.currentConversation);
   const currentConversationId = useChatStore(
     (state) => state.currentConversationId,
   );
   const messages = useChatStore((state) => state.messages);
-  const onlineUsers = useChatStore((state) => state.onlineUsers);
-  const typingUser = useChatStore((state) => state.typingUser);
   const setConversation = useChatStore((state) => state.setConversation);
   const setMessages = useChatStore((state) => state.setMessages);
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [creatingConversation, setCreatingConversation] = useState(false);
+  const [friendRequestCount, setFriendRequestCount] = useState(0);
+  const [typingUser, setTypingUser] = useState<{
+    userId: string;
+    username: string;
+  } | null>(null);
+  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
@@ -35,17 +44,6 @@ export default function ChatScreen() {
     currentConversation?.members.find(
       (member) => member.user.id !== currentUser?.id,
     )?.user ?? null;
-
-  // Connect Socket.IO
-  useEffect(() => {
-    if (!token) return;
-
-    connectSocket(token);
-
-    return () => {
-      disconnectSocket();
-    };
-  }, [token]);
 
   // Load users for the quick chat list on the right
   useEffect(() => {
@@ -78,9 +76,46 @@ export default function ChatScreen() {
     fetchUsers();
   }, [token]);
 
+  useEffect(() => {
+    if (!token) {
+      setFriendRequestCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshFriendRequests = async () => {
+      try {
+        const requests = await getFriendRequests(token);
+        if (!cancelled) {
+          setFriendRequestCount(requests.length);
+        }
+      } catch (error) {
+        console.error("Load friend requests count error:", error);
+      }
+    };
+
+    void refreshFriendRequests();
+
+    const unsubscribe = subscribeToFriendEvents({
+      onNewRequest: () => {
+        void refreshFriendRequests();
+      },
+      onAccepted: () => {
+        void refreshFriendRequests();
+      },
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [token]);
+
   // Load conversation messages whenever the active conversation changes
   useEffect(() => {
     if (!token || !currentConversationId) {
+      setTypingUser(null);
       setMessages([]);
       return;
     }
@@ -142,6 +177,56 @@ export default function ChatScreen() {
       cancelled = true;
     };
   }, [currentConversationId, setMessages, token]);
+
+  useEffect(() => {
+    if (!currentConversationId) {
+      setTypingUser(null);
+      return;
+    }
+
+    const handleUserTyping = (user: {
+      conversationId: string;
+      userId: string;
+      username: string;
+    }) => {
+      if (user.conversationId !== currentConversationId) {
+        return;
+      }
+
+      if (user.userId === currentUser?.id) {
+        return;
+      }
+
+      setTypingUser({
+        userId: user.userId,
+        username: user.username,
+      });
+    };
+
+    const handleUserStoppedTyping = (user: {
+      conversationId: string;
+      userId: string;
+    }) => {
+      if (user.conversationId !== currentConversationId) {
+        return;
+      }
+
+      if (user.userId === currentUser?.id) {
+        return;
+      }
+
+      setTypingUser(null);
+    };
+
+    socket.on("userTyping", handleUserTyping);
+    socket.on("userStoppedTyping", handleUserStoppedTyping);
+
+    return () => {
+      socket.off("userTyping", handleUserTyping);
+      socket.off("userStoppedTyping", handleUserStoppedTyping);
+      setTypingUser(null);
+    };
+  }, [currentConversationId, currentUser?.id]);
 
   // Auto-scroll messages
   useEffect(() => {
@@ -228,6 +313,50 @@ export default function ChatScreen() {
       }}
     >
       <h1>Real-Time Chat</h1>
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "flex-end",
+          marginTop: "-40px",
+          marginBottom: "16px",
+        }}
+      >
+        <button
+          type="button"
+          onClick={() => navigate("/friends")}
+          style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: "8px",
+            border: "1px solid #d1d5db",
+            background: "white",
+            borderRadius: "999px",
+            padding: "10px 16px",
+            cursor: "pointer",
+            fontWeight: 600,
+          }}
+        >
+          Friends
+          {friendRequestCount > 0 && (
+            <span
+              style={{
+                minWidth: "22px",
+                height: "22px",
+                borderRadius: "999px",
+                background: "#dc2626",
+                color: "white",
+                fontSize: "12px",
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {friendRequestCount}
+            </span>
+          )}
+        </button>
+      </div>
 
       <div
         style={{
@@ -352,12 +481,12 @@ export default function ChatScreen() {
                   style={{
                     marginTop: "5px",
                     fontSize: "14px",
-                    color: onlineUsers.includes(selectedUser.id)
-                      ? "green"
+                    color: onlineUserIds.includes(selectedUser.id)
+                      ? "#16a34a"
                       : "#777",
                   }}
                 >
-                  {onlineUsers.includes(selectedUser.id)
+                  {onlineUserIds.includes(selectedUser.id)
                     ? "🟢 Online"
                     : "⚫ Offline"}
                 </div>
