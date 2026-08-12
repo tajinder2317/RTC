@@ -32,6 +32,9 @@ export default function ChatScreen() {
 
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messages = useChatStore((state) => state.messages);
@@ -51,7 +54,38 @@ export default function ChatScreen() {
     };
   }, [token]);
 
-  // ----------
+  // Load users
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true);
+
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.message || "Failed to fetch users");
+        }
+
+        setUsers(data.users);
+      } catch (error) {
+        console.error("Fetch users error:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    fetchUsers();
+  }, [token]);
+
+  // Auto-scroll messages
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
       behavior: "smooth",
@@ -70,10 +104,8 @@ export default function ChatScreen() {
       setSelectedUser(otherUser);
       setConversationId(conversation.id);
 
-      // Join Socket.IO room
       setConversation(conversation.id);
 
-      // Load messages
       const response = await fetch(
         `${import.meta.env.VITE_API_URL}/messages/${conversation.id}`,
         {
@@ -90,6 +122,7 @@ export default function ChatScreen() {
       }
 
       setMessages(data.messages);
+
       await fetch(
         `${import.meta.env.VITE_API_URL}/conversations/${conversation.id}/read`,
         {
@@ -101,6 +134,43 @@ export default function ChatScreen() {
       );
     } catch (error) {
       console.error("Open conversation error:", error);
+    }
+  };
+
+  // Create or get conversation with a user
+  const startConversation = async (user: User) => {
+    if (!token || creatingConversation) return;
+
+    try {
+      setCreatingConversation(true);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/conversations`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Failed to create conversation");
+      }
+
+      const conversation: Conversation = data.conversation;
+
+      await openConversation(conversation);
+    } catch (error) {
+      console.error("Start conversation error:", error);
+    } finally {
+      setCreatingConversation(false);
     }
   };
 
@@ -135,7 +205,7 @@ export default function ChatScreen() {
           minHeight: "500px",
         }}
       >
-        {/* Conversation sidebar */}
+        {/* Sidebar */}
         <div
           style={{
             width: "300px",
@@ -144,6 +214,7 @@ export default function ChatScreen() {
             overflow: "hidden",
           }}
         >
+          {/* Conversations */}
           <div
             style={{
               padding: "20px",
@@ -153,10 +224,66 @@ export default function ChatScreen() {
             <h2 style={{ margin: 0 }}>Conversations</h2>
           </div>
 
-          <ConversationList
-            onSelectConversation={openConversation}
-            currentConversationId={conversationId}
-          />
+          <div style={{ padding: "10px 20px" }}>
+            <ConversationList
+              onSelectConversation={openConversation}
+              currentConversationId={conversationId}
+            />
+          </div>
+
+          {/* Users */}
+          <div
+            style={{
+              borderTop: "1px solid #ddd",
+              padding: "20px",
+            }}
+          >
+            <h3 style={{ marginTop: 0 }}>Start a new chat</h3>
+
+            {loadingUsers ? (
+              <p>Loading users...</p>
+            ) : users.length === 0 ? (
+              <p>No other users found.</p>
+            ) : (
+              users.map((user) => (
+                <div
+                  key={user.id}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    padding: "10px 0",
+                    borderBottom: "1px solid #eee",
+                  }}
+                >
+                  <div>
+                    <strong>{user.username}</strong>
+                    <div
+                      style={{
+                        fontSize: "12px",
+                        color: "#777",
+                      }}
+                    >
+                      {user.email}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => startConversation(user)}
+                    disabled={creatingConversation}
+                    style={{
+                      border: "none",
+                      borderRadius: "6px",
+                      padding: "7px 10px",
+                      cursor: creatingConversation ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    Chat
+                  </button>
+                </div>
+              ))
+            )}
+          </div>
         </div>
 
         {/* Chat area */}
@@ -173,7 +300,10 @@ export default function ChatScreen() {
           {!selectedUser ? (
             <div style={{ padding: "30px" }}>
               <h2>Select a conversation</h2>
-              <p>Choose a conversation from the left to start chatting.</p>
+              <p>
+                Choose an existing conversation or start a new chat from the
+                left.
+              </p>
             </div>
           ) : (
             <>
@@ -214,6 +344,7 @@ export default function ChatScreen() {
                 ) : (
                   messages.map((message) => {
                     const isMine = message.senderId === currentUser?.id;
+
                     return (
                       <div
                         key={message.id}
@@ -237,6 +368,7 @@ export default function ChatScreen() {
                     );
                   })
                 )}
+
                 <div ref={messagesEndRef} />
               </div>
 
