@@ -54,9 +54,27 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
 
     const directKey = getDirectConversationKey(currentUserId, otherUserId);
 
-    const existingConversations = await prisma.conversation.findMany({
+    // First, try to find existing conversation by directKey (most reliable)
+    let existingConversation = await prisma.conversation.findFirst({
+      where: {
+        directKey,
+        type: "DIRECT",
+      },
+      include: conversationInclude,
+    });
+
+    if (existingConversation) {
+      return res.json({
+        message: "Conversation already exists",
+        conversation: existingConversation,
+      });
+    }
+
+    // Fallback: search for conversations without directKey (legacy data)
+    const legacyConversations = await prisma.conversation.findMany({
       where: {
         type: "DIRECT",
+        directKey: null,
         AND: [
           {
             members: {
@@ -80,44 +98,50 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
       },
     });
 
-    if (existingConversations.length > 0) {
-      const existingConversation = existingConversations[0];
+    if (legacyConversations.length > 0) {
+      const oldestConversation = legacyConversations[0];
 
-      if (existingConversations.length > 1) {
-        console.warn("Duplicate direct conversations detected:", {
-          userAId: currentUserId,
-          userBId: otherUserId,
-          conversationIds: existingConversations.map((conversation) => conversation.id),
+      if (!oldestConversation) {
+        return res.status(500).json({
+          message: "Error retrieving conversation",
         });
       }
 
-      if (!existingConversation.directKey) {
-        try {
-          const updatedConversation = await prisma.conversation.update({
-            where: {
-              id: existingConversation.id,
-            },
-            data: {
-              directKey,
-            },
-            include: conversationInclude,
-          });
-
-          return res.json({
-            message: "Conversation already exists",
-            conversation: updatedConversation,
-          });
-        } catch (error) {
-          console.error("Direct conversation key backfill error:", error);
-        }
+      if (legacyConversations.length > 1) {
+        console.warn("Duplicate direct conversations detected (legacy without directKey):", {
+          userAId: currentUserId,
+          userBId: otherUserId,
+          conversationIds: legacyConversations.map((conversation) => conversation.id),
+        });
       }
 
-      return res.json({
-        message: "Conversation already exists",
-        conversation: existingConversation,
-      });
+      // Backfill directKey to prevent future duplicates
+      try {
+        existingConversation = await prisma.conversation.update({
+          where: {
+            id: oldestConversation.id,
+          },
+          data: {
+            directKey,
+          },
+          include: conversationInclude,
+        });
+
+        return res.json({
+          message: "Conversation already exists",
+          conversation: existingConversation,
+        });
+      } catch (error) {
+        console.error("Direct conversation key backfill error:", error);
+        // If backfill fails, still return the existing conversation
+        return res.json({
+          message: "Conversation already exists",
+          conversation: oldestConversation,
+        });
+      }
     }
 
+    // Create new conversation with directKey to prevent duplicates
     try {
       const conversation = await prisma.conversation.create({
         data: {
@@ -149,17 +173,18 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
         (error as { code?: string }).code === "P2002";
 
       if (isUniqueConstraintError) {
-        const conversation = await prisma.conversation.findFirst({
+        // Race condition: another request created the conversation simultaneously
+        const raceConditionConversation = await prisma.conversation.findFirst({
           where: {
             directKey,
           },
           include: conversationInclude,
         });
 
-        if (conversation) {
+        if (raceConditionConversation) {
           return res.json({
             message: "Conversation already exists",
-            conversation,
+            conversation: raceConditionConversation,
           });
         }
       }

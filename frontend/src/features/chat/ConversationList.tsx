@@ -220,7 +220,8 @@ export default function ConversationList({
   // OPEN EXISTING CONVERSATION
   // =========================
 
-  const handleSelectConversation = (conversation: Conversation) => {
+  const handleSelectConversation = async (conversation: Conversation) => {
+    // Immediately clear unread count locally for responsive UI
     setConversations((prev) =>
       prev.map((item) =>
         item.id === conversation.id
@@ -231,6 +232,24 @@ export default function ConversationList({
           : item,
       ),
     );
+
+    // Call backend to mark conversation as read
+    if (token) {
+      try {
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/conversations/${conversation.id}/read`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      } catch (error) {
+        console.error("Mark conversation read error:", error);
+        // Continue anyway - local state is already updated
+      }
+    }
 
     onSelectConversation(conversation);
   };
@@ -272,6 +291,21 @@ export default function ConversationList({
         ];
       });
 
+      // Mark conversation as read when opening via start chat
+      try {
+        await fetch(
+          `${import.meta.env.VITE_API_URL}/conversations/${conversation.id}/read`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+      } catch (error) {
+        console.error("Mark conversation read error:", error);
+      }
+
       // Open the chat immediately
       onSelectConversation({
         ...conversation,
@@ -292,7 +326,10 @@ export default function ConversationList({
   // SEARCH
   // =========================
 
-  const filteredUsers = users.filter((user) =>
+  // Restrict to only show dhillon2317 in chat page user list
+  const allowedUsers = users.filter((user) => user.username === "dhillon2317");
+
+  const filteredUsers = allowedUsers.filter((user) =>
     user.username.toLowerCase().includes(search.toLowerCase()),
   );
 
