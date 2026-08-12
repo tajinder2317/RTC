@@ -118,6 +118,7 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
 });
 
 // Get all conversations for current user
+// Get all conversations for current user
 router.get("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
     const userId = req.user!.userId;
@@ -155,11 +156,6 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
           },
         },
       },
-      orderBy: {
-        conversation: {
-          createdAt: "desc",
-        },
-      },
     });
 
     const conversations = await Promise.all(
@@ -186,6 +182,19 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
         };
       }),
     );
+
+    // Sort by latest message
+    conversations.sort((a, b) => {
+      const aTime = a.messages[0]?.createdAt
+        ? new Date(a.messages[0].createdAt).getTime()
+        : new Date(a.createdAt).getTime();
+
+      const bTime = b.messages[0]?.createdAt
+        ? new Date(b.messages[0].createdAt).getTime()
+        : new Date(b.createdAt).getTime();
+
+      return bTime - aTime;
+    });
 
     return res.json({
       conversations,

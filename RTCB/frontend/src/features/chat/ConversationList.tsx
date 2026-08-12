@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useAuthStore } from "../auth/authStore";
+import { socket } from "../../services/socket";
 
 type User = {
   id: string;
@@ -24,10 +25,12 @@ type Conversation = {
 
 type ConversationListProps = {
   onSelectConversation: (conversation: Conversation) => void;
+  currentConversationId: string | null;
 };
 
 export default function ConversationList({
   onSelectConversation,
+  currentConversationId,
 }: ConversationListProps) {
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
@@ -35,19 +38,25 @@ export default function ConversationList({
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(true);
 
+  // Fetch conversations
   useEffect(() => {
     const fetchConversations = async () => {
       try {
-        const response = await fetch("http://localhost:5000/conversations", {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const response = await fetch(
+          "http://localhost:5000/conversations",
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
-        });
+        );
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch conversations");
+          throw new Error(
+            data.message || "Failed to fetch conversations",
+          );
         }
 
         setConversations(data.conversations);
@@ -63,10 +72,89 @@ export default function ConversationList({
     }
   }, [token]);
 
+  // Real-time message updates
+  useEffect(() => {
+    const handleNewMessage = (message: {
+      id: string;
+      conversationId: string;
+      senderId: string;
+      text: string;
+      createdAt: string;
+    }) => {
+      // Ignore our own messages
+      if (message.senderId === currentUser?.id) {
+        return;
+      }
+
+      setConversations((prev) => {
+        const conversation = prev.find(
+          (item) => item.id === message.conversationId,
+        );
+
+        // Conversation isn't currently in sidebar
+        if (!conversation) {
+          return prev;
+        }
+
+        const isCurrentConversation =
+          conversation.id === currentConversationId;
+
+        const updatedConversation: Conversation = {
+          ...conversation,
+
+          // Don't count messages while user is viewing the conversation
+          unreadCount: isCurrentConversation
+            ? 0
+            : conversation.unreadCount + 1,
+
+          // Update latest message
+          messages: [
+            {
+              id: message.id,
+              text: message.text,
+              senderId: message.senderId,
+              createdAt: message.createdAt,
+            },
+          ],
+        };
+
+        // Move conversation to the top
+        return [
+          updatedConversation,
+          ...prev.filter(
+            (item) => item.id !== message.conversationId,
+          ),
+        ];
+      });
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [currentUser?.id, currentConversationId]);
+
   const getOtherUser = (conversation: Conversation) => {
     return conversation.members.find(
       (member) => member.user.id !== currentUser?.id,
     )?.user;
+  };
+
+  const handleSelectConversation = (conversation: Conversation) => {
+    // Immediately clear unread badge
+    setConversations((prev) =>
+      prev.map((item) =>
+        item.id === conversation.id
+          ? {
+              ...item,
+              unreadCount: 0,
+            }
+          : item,
+      ),
+    );
+
+    onSelectConversation(conversation);
   };
 
   if (loading) {
@@ -90,7 +178,9 @@ export default function ConversationList({
         return (
           <div
             key={conversation.id}
-            onClick={() => onSelectConversation(conversation)}
+            onClick={() =>
+              handleSelectConversation(conversation)
+            }
             style={{
               padding: "15px",
               borderBottom: "1px solid #ddd",
@@ -133,7 +223,9 @@ export default function ConversationList({
                 marginTop: "5px",
               }}
             >
-              {lastMessage ? lastMessage.text : "No messages yet"}
+              {lastMessage
+                ? lastMessage.text
+                : "No messages yet"}
             </div>
           </div>
         );

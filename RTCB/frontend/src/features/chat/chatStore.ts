@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { socket } from "../../services/socket";
+import { useAuthStore } from "../auth/authStore";
 
 export type Message = {
   id: string;
@@ -7,6 +8,8 @@ export type Message = {
   senderId: string;
   text: string;
   createdAt: string;
+  deliveredAt?: string | null;
+  readAt?: string | null;
 };
 
 type ChatState = {
@@ -85,11 +88,19 @@ export const useChatStore = create<ChatState>((set) => ({
 socket.on("newMessage", (message: Message) => {
   const currentConversationId = useChatStore.getState().currentConversationId;
 
-  if (message.conversationId !== currentConversationId) {
-    return;
+  if (message.conversationId === currentConversationId) {
+    useChatStore.getState().addMessage(message);
   }
 
-  useChatStore.getState().addMessage(message);
+  // If this message is from someone else,
+  // tell the server it has been delivered.
+  const currentUserId = useAuthStore.getState().user?.id;
+
+  if (currentUserId && message.senderId !== currentUserId) {
+    socket.emit("messageDelivered", {
+      messageId: message.id,
+    });
+  }
 });
 
 socket.on("userTyping", (user: { userId: string; username: string }) => {
@@ -112,3 +123,18 @@ socket.on("onlineUsers", ({ userIds }: { userIds: string[] }) => {
     onlineUsers: userIds,
   });
 });
+socket.on(
+  "messageDelivered",
+  ({ messageId, deliveredAt }: { messageId: string; deliveredAt: string }) => {
+    useChatStore.setState((state) => ({
+      messages: state.messages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              deliveredAt,
+            }
+          : message,
+      ),
+    }));
+  },
+);

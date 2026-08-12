@@ -153,7 +153,10 @@ export default function ChatScreen() {
             <h2 style={{ margin: 0 }}>Conversations</h2>
           </div>
 
-          <ConversationList onSelectConversation={openConversation} />
+          <ConversationList
+            onSelectConversation={openConversation}
+            currentConversationId={conversationId}
+          />
         </div>
 
         {/* Chat area */}
