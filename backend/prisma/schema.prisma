@@ -68,6 +68,7 @@ model Conversation {
   id        String           @id @default(cuid())
   type      ConversationType @default(DIRECT)
   name      String?
+  directKey String?          @unique
   createdAt DateTime         @default(now())
 
   members  ConversationMember[]
@@ -100,4 +101,3 @@ model Message {
 
   @@index([conversationId, createdAt])
 }
-

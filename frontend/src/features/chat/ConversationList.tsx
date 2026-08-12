@@ -91,6 +91,23 @@ export default function ConversationList({
     fetchUsers();
   }, [token]);
 
+  useEffect(() => {
+    if (!currentConversationId) {
+      return;
+    }
+
+    setConversations((prev) =>
+      prev.map((conversation) =>
+        conversation.id === currentConversationId
+          ? {
+              ...conversation,
+              unreadCount: 0,
+            }
+          : conversation,
+      ),
+    );
+  }, [currentConversationId]);
+
   // =========================
   // REAL-TIME MESSAGE UPDATES
   // =========================
@@ -149,6 +166,45 @@ export default function ConversationList({
       socket.off("newMessage", handleNewMessage);
     };
   }, [currentUser?.id, currentConversationId]);
+
+  useEffect(() => {
+    const handleMessageRead = (payload: {
+      conversationId: string;
+      messageIds: string[];
+      readAt: string;
+    }) => {
+      if (!payload.conversationId || payload.messageIds.length === 0) {
+        return;
+      }
+
+      setConversations((prev) =>
+        prev.map((conversation) => {
+          if (conversation.id !== payload.conversationId) {
+            return conversation;
+          }
+
+          return {
+            ...conversation,
+            unreadCount: 0,
+            messages: conversation.messages.map((message) =>
+              payload.messageIds.includes(message.id)
+                ? {
+                    ...message,
+                    readAt: payload.readAt,
+                  }
+                : message,
+            ),
+          };
+        }),
+      );
+    };
+
+    socket.on("message:read", handleMessageRead);
+
+    return () => {
+      socket.off("message:read", handleMessageRead);
+    };
+  }, []);
 
   // =========================
   // GET OTHER USER

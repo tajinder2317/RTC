@@ -55,6 +55,7 @@ export default function ChatScreen() {
     unreadIncomingMessageIds.length > 0 && currentConversationId
       ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
       : null;
+  const startChatUsers = users.filter((user) => user.username === "dhillon2317");
 
   const selectedUser =
     currentConversation?.members.find(
@@ -449,10 +450,10 @@ export default function ChatScreen() {
 
             {loadingUsers ? (
               <p>Loading users...</p>
-            ) : users.length === 0 ? (
+            ) : startChatUsers.length === 0 ? (
               <p>No other users found.</p>
             ) : (
-              users.map((user) => (
+              startChatUsers.map((user) => (
                 <div
                   key={user.id}
                   style={{

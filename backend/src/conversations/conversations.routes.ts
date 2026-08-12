@@ -5,6 +5,23 @@ import type { AuthRequest } from "../middleware/authMiddleware.js";
 
 const router = Router();
 
+const conversationInclude = {
+  members: {
+    include: {
+      user: {
+        select: {
+          id: true,
+          username: true,
+          email: true,
+        },
+      },
+    },
+  },
+} as const;
+
+const getDirectConversationKey = (userAId: string, userBId: string) =>
+  [userAId, userBId].sort().join(":");
+
 // Create or get a conversation with another user
 router.post("/", authenticateToken, async (req: AuthRequest, res) => {
   try {
@@ -35,8 +52,11 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
       });
     }
 
-    const existingConversation = await prisma.conversation.findFirst({
+    const directKey = getDirectConversationKey(currentUserId, otherUserId);
+
+    const existingConversations = await prisma.conversation.findMany({
       where: {
+        type: "DIRECT",
         AND: [
           {
             members: {
@@ -54,60 +74,98 @@ router.post("/", authenticateToken, async (req: AuthRequest, res) => {
           },
         ],
       },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                email: true,
-              },
-            },
-          },
-        },
+      include: conversationInclude,
+      orderBy: {
+        createdAt: "asc",
       },
     });
 
-    if (existingConversation) {
+    if (existingConversations.length > 0) {
+      const existingConversation = existingConversations[0];
+
+      if (existingConversations.length > 1) {
+        console.warn("Duplicate direct conversations detected:", {
+          userAId: currentUserId,
+          userBId: otherUserId,
+          conversationIds: existingConversations.map((conversation) => conversation.id),
+        });
+      }
+
+      if (!existingConversation.directKey) {
+        try {
+          const updatedConversation = await prisma.conversation.update({
+            where: {
+              id: existingConversation.id,
+            },
+            data: {
+              directKey,
+            },
+            include: conversationInclude,
+          });
+
+          return res.json({
+            message: "Conversation already exists",
+            conversation: updatedConversation,
+          });
+        } catch (error) {
+          console.error("Direct conversation key backfill error:", error);
+        }
+      }
+
       return res.json({
         message: "Conversation already exists",
         conversation: existingConversation,
       });
     }
 
-    const conversation = await prisma.conversation.create({
-      data: {
-        members: {
-          create: [
-            {
-              userId: currentUserId,
-            },
-            {
-              userId: otherUserId,
-            },
-          ],
-        },
-      },
-      include: {
-        members: {
-          include: {
-            user: {
-              select: {
-                id: true,
-                username: true,
-                email: true,
+    try {
+      const conversation = await prisma.conversation.create({
+        data: {
+          type: "DIRECT",
+          directKey,
+          members: {
+            create: [
+              {
+                userId: currentUserId,
               },
-            },
+              {
+                userId: otherUserId,
+              },
+            ],
           },
         },
-      },
-    });
+        include: conversationInclude,
+      });
 
-    return res.status(201).json({
-      message: "Conversation created successfully",
-      conversation,
-    });
+      return res.status(201).json({
+        message: "Conversation created successfully",
+        conversation,
+      });
+    } catch (error) {
+      const isUniqueConstraintError =
+        typeof error === "object" &&
+        error !== null &&
+        "code" in error &&
+        (error as { code?: string }).code === "P2002";
+
+      if (isUniqueConstraintError) {
+        const conversation = await prisma.conversation.findFirst({
+          where: {
+            directKey,
+          },
+          include: conversationInclude,
+        });
+
+        if (conversation) {
+          return res.json({
+            message: "Conversation already exists",
+            conversation,
+          });
+        }
+      }
+
+      throw error;
+    }
   } catch (error) {
     console.error("Create conversation error:", error);
 
@@ -183,8 +241,44 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
       }),
     );
 
+    const uniqueConversations = Array.from(
+      conversations
+        .reduce((map, conversation) => {
+          const conversationKey =
+            conversation.directKey ??
+            (conversation.type === "DIRECT" && conversation.members.length === 2
+              ? conversation.members
+                  .map((member) => member.user.id)
+                  .sort()
+                  .join(":")
+              : conversation.id);
+
+          const existingConversation = map.get(conversationKey);
+
+          if (!existingConversation) {
+            map.set(conversationKey, conversation);
+            return map;
+          }
+
+          const currentTime = conversation.messages[0]?.createdAt
+            ? new Date(conversation.messages[0].createdAt).getTime()
+            : new Date(conversation.createdAt).getTime();
+
+          const existingTime = existingConversation.messages[0]?.createdAt
+            ? new Date(existingConversation.messages[0].createdAt).getTime()
+            : new Date(existingConversation.createdAt).getTime();
+
+          if (currentTime > existingTime) {
+            map.set(conversationKey, conversation);
+          }
+
+          return map;
+        }, new Map<string, (typeof conversations)[number]>())
+        .values(),
+    );
+
     // Sort by latest message
-    conversations.sort((a, b) => {
+    uniqueConversations.sort((a, b) => {
       const aTime = a.messages[0]?.createdAt
         ? new Date(a.messages[0].createdAt).getTime()
         : new Date(a.createdAt).getTime();
@@ -197,7 +291,7 @@ router.get("/", authenticateToken, async (req: AuthRequest, res) => {
     });
 
     return res.json({
-      conversations,
+      conversations: uniqueConversations,
     });
   } catch (error) {
     console.error("Get conversations error:", error);
