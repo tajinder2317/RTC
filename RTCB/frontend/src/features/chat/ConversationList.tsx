@@ -43,7 +43,7 @@ export default function ConversationList({
     const fetchConversations = async () => {
       try {
         const response = await fetch(
-          "http://localhost:5000/conversations",
+          `${import.meta.env.VITE_API_URL}/conversations`,
           {
             headers: {
               Authorization: `Bearer ${token}`,

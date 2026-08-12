@@ -7,8 +7,8 @@
   "type": "commonjs",
   "main": "main.tsx",
   "scripts": {
-    "test": "npm run test",
     "dev": "vite",
+    "build": "vite build",
     "start": "vite preview"
   },
   "dependencies": {

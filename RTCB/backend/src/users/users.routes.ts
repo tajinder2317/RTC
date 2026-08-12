@@ -1,10 +1,7 @@
 import { Router } from "express";
 import { prisma } from "../lib/prisma.js";
-import {
-  authenticateToken,
-  type AuthRequest,
-} from "../middleware/authMiddleware.js";
-
+import { authenticateToken } from "../middleware/authMiddleware.js";
+import type { AuthRequest } from "../middleware/authMiddleware.js";
 const router = Router();
 
 router.get("/", authenticateToken, async (req: AuthRequest, res) => {

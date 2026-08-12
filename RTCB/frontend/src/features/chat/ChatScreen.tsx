@@ -75,7 +75,7 @@ export default function ChatScreen() {
 
       // Load messages
       const response = await fetch(
-        `http://localhost:5000/messages/${conversation.id}`,
+        `${import.meta.env.VITE_API_URL}/messages/${conversation.id}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -91,7 +91,7 @@ export default function ChatScreen() {
 
       setMessages(data.messages);
       await fetch(
-        `http://localhost:5000/conversations/${conversation.id}/read`,
+        `${import.meta.env.VITE_API_URL}/conversations/${conversation.id}/read`,
         {
           method: "POST",
           headers: {
