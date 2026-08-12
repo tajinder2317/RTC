@@ -1,15 +1,18 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../../services/api";
 import { useAuthStore } from "./authStore";
+
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
   const login = useAuthStore((state) => state.login);
+  const navigate = useNavigate();
 
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -21,8 +24,10 @@ export default function Login() {
 
       login(data.token, data.user);
 
-      console.log("Login Successful: ", data);
-      setMessage("Login Successfull!");
+      console.log("Login Successful:", data);
+
+      // Go directly to chat after successful login
+      navigate("/chat", { replace: true });
     } catch (error) {
       if (error instanceof Error) {
         setMessage(error.message);
