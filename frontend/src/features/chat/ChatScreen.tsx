@@ -142,7 +142,7 @@ export default function ChatScreen() {
     const fetchMessages = async () => {
       try {
         const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/conversations/${currentConversationId}/messages`,
+  `${import.meta.env.VITE_API_URL}/messages/${currentConversationId}`,
           {
             headers: {
               Authorization: `Bearer ${token}`,
