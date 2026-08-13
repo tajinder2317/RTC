@@ -2,27 +2,15 @@ import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser, loginUser } from "../../services/api";
 import { useAuthStore } from "./authStore";
+import { useAuthTheme } from "./useAuthTheme";
 
 type Theme = "dark" | "light";
 
-function applyTheme(theme: Theme) {
-  document.documentElement.classList.toggle(
-    "dark",
-    theme === "dark",
-  );
-
-  localStorage.setItem("rtc-theme", theme);
-}
-
-function getInitialTheme(): Theme {
+const getInitialTheme = (): Theme => {
   const saved = localStorage.getItem("rtc-theme");
 
-  if (saved === "light" || saved === "dark") {
-    return saved;
-  }
-
-  return "dark";
-}
+  return saved === "light" || saved === "dark" ? saved : "dark";
+};
 
 export default function Register() {
   const [username, setUsername] = useState("");
@@ -31,20 +19,15 @@ export default function Register() {
   const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [theme, setTheme] = useState<Theme>(getInitialTheme);
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useAuthTheme();
 
   useEffect(() => {
-    applyTheme(theme);
-  }, [theme]);
-
-  const toggleTheme = () => {
-    setTheme((current) =>
-      current === "dark" ? "light" : "dark",
-    );
-  };
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("rtc-theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,46 +36,32 @@ export default function Register() {
     setMessage("");
 
     try {
-      const data = await registerUser(
-        username,
-        email,
-        password,
-      );
+      const data = await registerUser(username, email, password);
 
       if (data?.token && data?.user) {
         login(data.token, data.user);
       } else {
-        const loginData = await loginUser(
-          email,
-          password,
-        );
-
+        const loginData = await loginUser(email, password);
         login(loginData.token, loginData.user);
       }
 
       navigate("/chat", { replace: true });
     } catch (error) {
       setMessage(
-        error instanceof Error
-          ? error.message
-          : "Registration failed",
+        error instanceof Error ? error.message : "Registration failed",
       );
     } finally {
       setLoading(false);
     }
   };
 
-  const isDark = theme === "dark";
-
   return (
     <main
       className="
         min-h-dvh
-        bg-zinc-100
-        text-zinc-950
+        bg-zinc-100 text-zinc-950
         transition-colors duration-300
-        dark:bg-[#050505]
-        dark:text-white
+        dark:bg-[#050505] dark:text-white
       "
     >
       <div
@@ -100,7 +69,7 @@ export default function Register() {
           relative flex min-h-dvh
           items-center justify-center
           overflow-hidden
-          p-3 sm:p-5 lg:p-8
+          p-3 sm:p-6 lg:p-8
         "
       >
         {/* Background */}
@@ -116,17 +85,15 @@ export default function Register() {
         <button
           type="button"
           onClick={toggleTheme}
-          aria-label="Toggle theme"
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
           className="
-            absolute right-4 top-4 z-20
-            flex h-10 w-10
-            items-center justify-center
+            absolute right-4 top-4 z-30
+            flex h-10 w-10 items-center justify-center
             rounded-xl
             border border-black/10
             bg-white/70
             text-zinc-700
-            shadow-sm
-            backdrop-blur-xl
+            shadow-sm backdrop-blur-xl
             transition
             hover:bg-white
             dark:border-white/10
@@ -173,9 +140,8 @@ export default function Register() {
             relative z-10
             flex w-full max-w-5xl
             overflow-hidden
-            rounded-[24px]
-            border
-            border-black/[0.08]
+            rounded-2xl sm:rounded-[24px]
+            border border-black/[0.08]
             bg-white/70
             shadow-[0_30px_100px_rgba(0,0,0,0.12)]
             backdrop-blur-2xl
@@ -188,18 +154,13 @@ export default function Register() {
           {/* Brand panel */}
           <section
             className="
-              relative hidden
-              w-[45%]
+              relative hidden w-[45%]
               overflow-hidden
-              border-r
-              border-black/[0.07]
+              border-r border-black/[0.07]
               bg-zinc-950
-              p-10
-              text-white
+              p-10 text-white
               dark:border-white/[0.08]
-              lg:flex
-              lg:flex-col
-              lg:justify-between
+              lg:flex lg:flex-col lg:justify-between
             "
           >
             <div
@@ -210,17 +171,7 @@ export default function Register() {
             />
 
             <div className="relative">
-              <div
-                className="
-                  flex h-11 w-11
-                  items-center justify-center
-                  rounded-[14px]
-                  border border-white/15
-                  bg-white/[0.07]
-                  text-xs font-black
-                  shadow-lg
-                "
-              >
+              <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-white/15 bg-white/[0.07] text-xs font-black shadow-lg">
                 RTC
               </div>
             </div>
@@ -230,13 +181,7 @@ export default function Register() {
                 REAL-TIME CHAT
               </p>
 
-              <h2
-                className="
-                  text-5xl font-bold
-                  leading-[0.95]
-                  tracking-[-0.045em]
-                "
-              >
+              <h2 className="text-5xl font-bold leading-[0.95] tracking-[-0.045em]">
                 Meet.
                 <br />
                 Message.
@@ -244,15 +189,9 @@ export default function Register() {
                 Connect.
               </h2>
 
-              <p
-                className="
-                  mt-6 max-w-sm
-                  text-sm leading-6
-                  text-white/45
-                "
-              >
-                Create your account and start having
-                real-time conversations with your friends.
+              <p className="mt-6 max-w-sm text-sm leading-6 text-white/45">
+                Create your account and start having real-time conversations
+                with your friends.
               </p>
             </div>
 
@@ -273,87 +212,37 @@ export default function Register() {
           >
             <div className="w-full max-w-md">
               {/* Mobile brand */}
-              <div
-                className="
-                  mb-7 flex items-center gap-3
-                  lg:hidden
-                "
-              >
-                <div
-                  className="
-                    flex h-10 w-10
-                    items-center justify-center
-                    rounded-xl
-                    bg-zinc-950
-                    text-[10px] font-black
-                    text-white
-                    dark:bg-white
-                    dark:text-black
-                  "
-                >
+              <div className="mb-7 flex items-center gap-3 lg:hidden">
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-zinc-950 text-[10px] font-black text-white dark:bg-white dark:text-black">
                   RTC
                 </div>
 
-                <span
-                  className="
-                    text-xs font-bold
-                    tracking-[0.15em]
-                    opacity-50
-                  "
-                >
+                <span className="text-xs font-bold tracking-[0.15em] opacity-50">
                   REAL-TIME CHAT
                 </span>
               </div>
 
               {/* Heading */}
               <div className="mb-7">
-                <p
-                  className="
-                    mb-2
-                    text-[10px] font-bold
-                    tracking-[0.18em]
-                    text-zinc-500
-                    dark:text-white/35
-                  "
-                >
+                <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-zinc-500 dark:text-white/35">
                   GET STARTED
                 </p>
 
-                <h1
-                  className="
-                    text-3xl font-bold
-                    tracking-[-0.035em]
-                    sm:text-4xl
-                  "
-                >
+                <h1 className="text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
                   Create your account
                 </h1>
 
-                <p
-                  className="
-                    mt-2
-                    text-sm
-                    text-zinc-500
-                    dark:text-white/40
-                  "
-                >
+                <p className="mt-2 text-sm text-zinc-500 dark:text-white/40">
                   It only takes a moment to get started.
                 </p>
               </div>
 
-              <form
-                onSubmit={handleSubmit}
-                className="space-y-4"
-              >
+              <form onSubmit={handleSubmit} className="space-y-4">
                 {/* Username */}
                 <div className="space-y-2">
                   <label
                     htmlFor="register-username"
-                    className="
-                      text-xs font-semibold
-                      text-zinc-700
-                      dark:text-white/65
-                    "
+                    className="text-xs font-semibold text-zinc-700 dark:text-white/65"
                   >
                     Username
                   </label>
@@ -363,25 +252,20 @@ export default function Register() {
                     type="text"
                     placeholder="Choose a username"
                     value={username}
-                    onChange={(e) =>
-                      setUsername(e.target.value)
-                    }
+                    onChange={(e) => setUsername(e.target.value)}
                     autoComplete="username"
                     required
                     className="
-                      h-12 w-full
-                      rounded-xl
+                      h-12 w-full rounded-xl
                       border border-black/[0.09]
                       bg-black/[0.025]
                       px-4
                       text-sm text-zinc-900
-                      outline-none
-                      transition
+                      outline-none transition
                       placeholder:text-zinc-400
                       focus:border-black/20
                       focus:bg-white
-                      focus:ring-4
-                      focus:ring-black/[0.035]
+                      focus:ring-4 focus:ring-black/[0.035]
                       dark:border-white/[0.09]
                       dark:bg-white/[0.035]
                       dark:text-white
@@ -397,11 +281,7 @@ export default function Register() {
                 <div className="space-y-2">
                   <label
                     htmlFor="register-email"
-                    className="
-                      text-xs font-semibold
-                      text-zinc-700
-                      dark:text-white/65
-                    "
+                    className="text-xs font-semibold text-zinc-700 dark:text-white/65"
                   >
                     Email
                   </label>
@@ -411,25 +291,20 @@ export default function Register() {
                     type="email"
                     placeholder="you@example.com"
                     value={email}
-                    onChange={(e) =>
-                      setEmail(e.target.value)
-                    }
+                    onChange={(e) => setEmail(e.target.value)}
                     autoComplete="email"
                     required
                     className="
-                      h-12 w-full
-                      rounded-xl
+                      h-12 w-full rounded-xl
                       border border-black/[0.09]
                       bg-black/[0.025]
                       px-4
                       text-sm text-zinc-900
-                      outline-none
-                      transition
+                      outline-none transition
                       placeholder:text-zinc-400
                       focus:border-black/20
                       focus:bg-white
-                      focus:ring-4
-                      focus:ring-black/[0.035]
+                      focus:ring-4 focus:ring-black/[0.035]
                       dark:border-white/[0.09]
                       dark:bg-white/[0.035]
                       dark:text-white
@@ -445,11 +320,7 @@ export default function Register() {
                 <div className="space-y-2">
                   <label
                     htmlFor="register-password"
-                    className="
-                      text-xs font-semibold
-                      text-zinc-700
-                      dark:text-white/65
-                    "
+                    className="text-xs font-semibold text-zinc-700 dark:text-white/65"
                   >
                     Password
                   </label>
@@ -457,32 +328,23 @@ export default function Register() {
                   <div className="relative">
                     <input
                       id="register-password"
-                      type={
-                        showPassword
-                          ? "text"
-                          : "password"
-                      }
+                      type={showPassword ? "text" : "password"}
                       placeholder="Create a password"
                       value={password}
-                      onChange={(e) =>
-                        setPassword(e.target.value)
-                      }
+                      onChange={(e) => setPassword(e.target.value)}
                       autoComplete="new-password"
                       required
                       className="
-                        h-12 w-full
-                        rounded-xl
+                        h-12 w-full rounded-xl
                         border border-black/[0.09]
                         bg-black/[0.025]
                         px-4 pr-16
                         text-sm text-zinc-900
-                        outline-none
-                        transition
+                        outline-none transition
                         placeholder:text-zinc-400
                         focus:border-black/20
                         focus:bg-white
-                        focus:ring-4
-                        focus:ring-black/[0.035]
+                        focus:ring-4 focus:ring-black/[0.035]
                         dark:border-white/[0.09]
                         dark:bg-white/[0.035]
                         dark:text-white
@@ -495,81 +357,47 @@ export default function Register() {
 
                     <button
                       type="button"
-                      onClick={() =>
-                        setShowPassword(
-                          (value) => !value,
-                        )
-                      }
+                      onClick={() => setShowPassword((value) => !value)}
                       className="
                         absolute right-3 top-1/2
                         -translate-y-1/2
                         text-[11px] font-semibold
-                        text-zinc-400
-                        transition
+                        text-zinc-400 transition
                         hover:text-zinc-700
                         dark:text-white/35
                         dark:hover:text-white/70
                       "
                     >
-                      {showPassword
-                        ? "Hide"
-                        : "Show"}
+                      {showPassword ? "Hide" : "Show"}
                     </button>
                   </div>
                 </div>
 
-                {/* Error */}
                 {message && (
-                  <div
-                    className="
-                      rounded-xl
-                      border border-red-500/15
-                      bg-red-500/[0.06]
-                      px-4 py-3
-                      text-xs
-                      text-red-600
-                      dark:text-red-400
-                    "
-                  >
+                  <div className="rounded-xl border border-red-500/15 bg-red-500/[0.06] px-4 py-3 text-xs text-red-600 dark:text-red-400">
                     {message}
                   </div>
                 )}
 
-                {/* Submit */}
                 <button
                   type="submit"
                   disabled={loading}
                   className="
-                    mt-1
-                    flex h-12 w-full
+                    mt-1 flex h-12 w-full
                     items-center justify-center gap-2
-                    rounded-xl
-                    bg-zinc-950
-                    px-4
-                    text-sm font-semibold
-                    text-white
-                    shadow-lg
-                    transition
+                    rounded-xl bg-zinc-950 px-4
+                    text-sm font-semibold text-white
+                    shadow-lg transition
                     hover:bg-zinc-800
                     active:scale-[0.99]
-                    disabled:cursor-not-allowed
-                    disabled:opacity-50
-                    dark:bg-white
-                    dark:text-black
+                    disabled:cursor-not-allowed disabled:opacity-50
+                    dark:bg-white dark:text-black
                     dark:hover:bg-white/90
                   "
                 >
                   {loading ? (
                     <>
-                      <span
-                        className="
-                          h-4 w-4 animate-spin
-                          rounded-full
-                          border-2
-                          border-current
-                          border-t-transparent
-                        "
-                      />
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
                       Creating account...
                     </>
                   ) : (
@@ -578,53 +406,21 @@ export default function Register() {
                 </button>
               </form>
 
-              {/* Divider */}
               <div className="my-7 flex items-center gap-3">
-                <span
-                  className="
-                    h-px flex-1
-                    bg-black/[0.07]
-                    dark:bg-white/[0.08]
-                  "
-                />
+                <span className="h-px flex-1 bg-black/[0.07] dark:bg-white/[0.08]" />
 
-                <span
-                  className="
-                    text-[9px] font-bold
-                    tracking-widest
-                    text-zinc-400
-                    dark:text-white/25
-                  "
-                >
+                <span className="text-[9px] font-bold tracking-widest text-zinc-400 dark:text-white/25">
                   OR
                 </span>
 
-                <span
-                  className="
-                    h-px flex-1
-                    bg-black/[0.07]
-                    dark:bg-white/[0.08]
-                  "
-                />
+                <span className="h-px flex-1 bg-black/[0.07] dark:bg-white/[0.08]" />
               </div>
 
-              {/* Login link */}
-              <p
-                className="
-                  text-center text-xs
-                  text-zinc-500
-                  dark:text-white/40
-                "
-              >
+              <p className="text-center text-xs text-zinc-500 dark:text-white/40">
                 Already have an account?{" "}
                 <Link
                   to="/login"
-                  className="
-                    ml-1 font-semibold
-                    text-zinc-900
-                    hover:underline
-                    dark:text-white
-                  "
+                  className="ml-1 font-semibold text-zinc-900 hover:underline dark:text-white"
                 >
                   Sign in
                 </Link>

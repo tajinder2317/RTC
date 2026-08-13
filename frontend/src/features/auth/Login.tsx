@@ -1,7 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { loginUser } from "../../services/api";
 import { useAuthStore } from "./authStore";
+import { useAuthTheme } from "./useAuthTheme";
+
+type Theme = "dark" | "light";
+
+const getInitialTheme = (): Theme => {
+  const saved = localStorage.getItem("rtc-theme");
+
+  return saved === "light" || saved === "dark" ? saved : "dark";
+};
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -12,6 +21,12 @@ export default function Login() {
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
+  const { isDark, toggleTheme } = useAuthTheme();
+
+  useEffect(() => {
+    document.documentElement.classList.toggle("dark", isDark);
+    localStorage.setItem("rtc-theme", isDark ? "dark" : "light");
+  }, [isDark]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,22 +49,140 @@ export default function Login() {
   };
 
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-[var(--rtc-bg)] p-4 text-[var(--rtc-text)] sm:p-6">
-      <div className="grid min-h-[640px] w-full max-w-5xl overflow-hidden rounded-[28px] border border-[var(--rtc-border)] bg-[var(--rtc-panel)] shadow-[0_30px_100px_var(--rtc-shadow)] backdrop-blur-2xl lg:grid-cols-[0.9fr_1.1fr]">
-        
-        {/* HERO */}
-        <section className="relative hidden overflow-hidden border-r border-[var(--rtc-border)] bg-[var(--rtc-panel)] lg:flex">
-          <div className="relative z-10 flex w-full flex-col justify-between p-12">
-            <div className="flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--rtc-border-strong)] bg-[var(--rtc-surface)] text-[11px] font-extrabold tracking-[0.08em] shadow-[0_12px_30px_var(--rtc-shadow)]">
-              RTC
+    <main
+      className="
+        min-h-dvh
+        bg-zinc-100 text-zinc-950
+        transition-colors duration-300
+        dark:bg-[#050505] dark:text-white
+      "
+    >
+      <div
+        className="
+          relative flex min-h-dvh
+          items-center justify-center
+          overflow-hidden
+          p-3 sm:p-6 lg:p-8
+        "
+      >
+        {/* Background */}
+        <div
+          className="
+            pointer-events-none absolute inset-0
+            bg-[radial-gradient(circle_at_20%_20%,rgba(0,0,0,0.06),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(0,0,0,0.05),transparent_35%)]
+            dark:bg-[radial-gradient(circle_at_20%_20%,rgba(255,255,255,0.055),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.035),transparent_35%)]
+          "
+        />
+
+        {/* Theme toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          aria-label={isDark ? "Switch to light mode" : "Switch to dark mode"}
+          className="
+            absolute right-4 top-4 z-30
+            flex h-10 w-10 items-center justify-center
+            rounded-xl
+            border border-black/10
+            bg-white/70
+            text-zinc-700
+            shadow-sm backdrop-blur-xl
+            transition
+            hover:bg-white
+            dark:border-white/10
+            dark:bg-white/[0.06]
+            dark:text-white/80
+            dark:hover:bg-white/[0.1]
+            sm:right-6 sm:top-6
+          "
+        >
+          {isDark ? (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2" />
+              <path d="M12 20v2" />
+              <path d="m4.93 4.93 1.41 1.41" />
+              <path d="m17.66 17.66 1.41 1.41" />
+              <path d="M2 12h2" />
+              <path d="M20 12h2" />
+              <path d="m6.34 17.66-1.41 1.41" />
+              <path d="m19.07 4.93-1.41 1.41" />
+            </svg>
+          ) : (
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              className="h-4 w-4"
+            >
+              <path d="M21 12.8A8.5 8.5 0 1 1 11.2 3 6.5 6.5 0 0 0 21 12.8Z" />
+            </svg>
+          )}
+        </button>
+
+        {/* Main card */}
+        <div
+          className="
+            relative z-10
+            flex w-full max-w-5xl
+            overflow-hidden
+            rounded-2xl sm:rounded-[24px]
+            border border-black/[0.08]
+            bg-white/70
+            shadow-[0_30px_100px_rgba(0,0,0,0.12)]
+            backdrop-blur-2xl
+            dark:border-white/[0.09]
+            dark:bg-white/[0.035]
+            dark:shadow-[0_30px_100px_rgba(0,0,0,0.45)]
+            lg:min-h-[620px]
+          "
+        >
+          {/* Brand panel */}
+          <section
+            className="
+              relative hidden w-[45%]
+              overflow-hidden
+              border-r border-black/[0.07]
+              bg-zinc-950
+              p-10 text-white
+              dark:border-white/[0.08]
+              lg:flex lg:flex-col lg:justify-between
+            "
+          >
+            <div
+              className="
+                pointer-events-none absolute inset-0
+                bg-[radial-gradient(circle_at_30%_20%,rgba(255,255,255,0.12),transparent_35%),radial-gradient(circle_at_80%_80%,rgba(255,255,255,0.07),transparent_35%)]
+              "
+            />
+
+            <div className="relative">
+              <div
+                className="
+                  flex h-11 w-11 items-center justify-center
+                  rounded-[14px]
+                  border border-white/15
+                  bg-white/[0.07]
+                  text-xs font-black shadow-lg
+                "
+              >
+                RTC
+              </div>
             </div>
 
-            <div className="max-w-sm">
-              <span className="mb-5 block text-[10px] font-bold tracking-[0.18em] text-[var(--rtc-text-muted)]">
+            <div className="relative">
+              <p className="mb-4 text-[10px] font-bold tracking-[0.2em] text-white/40">
                 REAL-TIME CHAT
-              </span>
+              </p>
 
-              <h2 className="text-5xl font-bold leading-[0.98] tracking-[-0.055em] xl:text-6xl">
+              <h2 className="text-5xl font-bold leading-[0.95] tracking-[-0.045em]">
                 Talk.
                 <br />
                 Connect.
@@ -57,148 +190,211 @@ export default function Login() {
                 Stay close.
               </h2>
 
-              <p className="mt-6 max-w-xs text-sm leading-7 text-[var(--rtc-text-muted)]">
-                A simple place to have real-time conversations
-                with the people who matter.
+              <p className="mt-6 max-w-sm text-sm leading-6 text-white/45">
+                A simple place to have real-time conversations with the people
+                who matter.
               </p>
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <span className="h-1.5 w-7 rounded-full bg-[var(--rtc-text-soft)]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--rtc-text-faint)]" />
-              <span className="h-1.5 w-1.5 rounded-full bg-[var(--rtc-text-faint)]" />
+            <div className="relative flex gap-2">
+              <span className="h-1 w-10 rounded-full bg-white/70" />
+              <span className="h-1 w-5 rounded-full bg-white/20" />
+              <span className="h-1 w-2 rounded-full bg-white/10" />
             </div>
-          </div>
+          </section>
 
-          <div className="pointer-events-none absolute -left-20 -top-20 h-72 w-72 rounded-full bg-white/[0.035] blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-32 -right-20 h-96 w-96 rounded-full bg-white/[0.025] blur-3xl" />
-        </section>
+          {/* Login panel */}
+          <section
+            className="
+              flex min-w-0 flex-1
+              items-center justify-center
+              p-6 sm:p-10 lg:p-14
+            "
+          >
+            <div className="w-full max-w-md">
+              {/* Mobile brand */}
+              <div className="mb-8 flex items-center gap-3 lg:hidden">
+                <div
+                  className="
+                    flex h-10 w-10 items-center justify-center
+                    rounded-xl
+                    bg-zinc-950
+                    text-[10px] font-black text-white
+                    dark:bg-white dark:text-black
+                  "
+                >
+                  RTC
+                </div>
 
-        {/* FORM */}
-        <section className="flex min-h-[640px] items-center justify-center bg-[var(--rtc-bg)]">
-          <div className="w-full max-w-[420px] px-6 py-10 sm:px-10 lg:px-12">
-            
-            <div className="mb-8">
-              <div className="mb-6 flex h-11 w-11 items-center justify-center rounded-[14px] border border-[var(--rtc-border-strong)] bg-[var(--rtc-surface)] text-[11px] font-extrabold tracking-[0.08em] shadow-[0_12px_30px_var(--rtc-shadow)] lg:hidden">
-                RTC
+                <span className="text-xs font-bold tracking-[0.15em] opacity-50">
+                  REAL-TIME CHAT
+                </span>
               </div>
 
-              <h1 className="text-[30px] font-bold tracking-[-0.035em]">
-                Welcome back
-              </h1>
+              {/* Heading */}
+              <div className="mb-8">
+                <p className="mb-2 text-[10px] font-bold tracking-[0.18em] text-zinc-500 dark:text-white/35">
+                  WELCOME BACK
+                </p>
 
-              <p className="mt-2 text-[13px] leading-6 text-[var(--rtc-text-muted)]">
-                Sign in to continue to your conversations.
-              </p>
-            </div>
+                <h1 className="text-3xl font-bold tracking-[-0.035em] sm:text-4xl">
+                  Sign in
+                </h1>
 
-            <form
-              onSubmit={handleSubmit}
-              className="flex flex-col gap-5"
-            >
-              {/* EMAIL */}
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="login-email"
-                  className="text-[11px] font-semibold text-[var(--rtc-text-soft)]"
-                >
-                  Email
-                </label>
-
-                <input
-                  id="login-email"
-                  type="email"
-                  placeholder="you@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  autoComplete="email"
-                  required
-                  className="h-12 w-full rounded-xl border border-[var(--rtc-border)] bg-[var(--rtc-input)] px-3.5 text-[13px] text-[var(--rtc-text)] outline-none transition placeholder:text-[var(--rtc-text-faint)] hover:border-[var(--rtc-border-strong)] focus:border-[var(--rtc-border-strong)] focus:bg-[var(--rtc-input-focus)] focus:ring-3 focus:ring-[var(--rtc-selected)]"
-                />
+                <p className="mt-2 text-sm text-zinc-500 dark:text-white/40">
+                  Continue to your conversations.
+                </p>
               </div>
 
-              {/* PASSWORD */}
-              <div className="flex flex-col gap-2">
-                <label
-                  htmlFor="login-password"
-                  className="text-[11px] font-semibold text-[var(--rtc-text-soft)]"
-                >
-                  Password
-                </label>
-
-                <div className="relative">
-                  <input
-                    id="login-password"
-                    type={showPassword ? "text" : "password"}
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    autoComplete="current-password"
-                    required
-                    className="h-12 w-full rounded-xl border border-[var(--rtc-border)] bg-[var(--rtc-input)] px-3.5 pr-16 text-[13px] text-[var(--rtc-text)] outline-none transition placeholder:text-[var(--rtc-text-faint)] hover:border-[var(--rtc-border-strong)] focus:border-[var(--rtc-border-strong)] focus:bg-[var(--rtc-input-focus)] focus:ring-3 focus:ring-[var(--rtc-selected)]"
-                  />
-
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowPassword((value) => !value)
-                    }
-                    aria-label={
-                      showPassword
-                        ? "Hide password"
-                        : "Show password"
-                    }
-                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded-lg px-2 py-1.5 text-[10px] font-semibold text-[var(--rtc-text-muted)] transition hover:bg-[var(--rtc-surface)] hover:text-[var(--rtc-text)]"
+              <form onSubmit={handleSubmit} className="space-y-5">
+                {/* Email */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="login-email"
+                    className="text-xs font-semibold text-zinc-700 dark:text-white/65"
                   >
-                    {showPassword ? "Hide" : "Show"}
-                  </button>
+                    Email
+                  </label>
+
+                  <input
+                    id="login-email"
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    required
+                    className="
+                      h-12 w-full rounded-xl
+                      border border-black/[0.09]
+                      bg-black/[0.025]
+                      px-4
+                      text-sm text-zinc-900
+                      outline-none transition
+                      placeholder:text-zinc-400
+                      focus:border-black/20
+                      focus:bg-white
+                      focus:ring-4 focus:ring-black/[0.035]
+                      dark:border-white/[0.09]
+                      dark:bg-white/[0.035]
+                      dark:text-white
+                      dark:placeholder:text-white/25
+                      dark:focus:border-white/20
+                      dark:focus:bg-white/[0.055]
+                      dark:focus:ring-white/[0.04]
+                    "
+                  />
                 </div>
+
+                {/* Password */}
+                <div className="space-y-2">
+                  <label
+                    htmlFor="login-password"
+                    className="text-xs font-semibold text-zinc-700 dark:text-white/65"
+                  >
+                    Password
+                  </label>
+
+                  <div className="relative">
+                    <input
+                      id="login-password"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      autoComplete="current-password"
+                      required
+                      className="
+                        h-12 w-full rounded-xl
+                        border border-black/[0.09]
+                        bg-black/[0.025]
+                        px-4 pr-16
+                        text-sm text-zinc-900
+                        outline-none transition
+                        placeholder:text-zinc-400
+                        focus:border-black/20
+                        focus:bg-white
+                        focus:ring-4 focus:ring-black/[0.035]
+                        dark:border-white/[0.09]
+                        dark:bg-white/[0.035]
+                        dark:text-white
+                        dark:placeholder:text-white/25
+                        dark:focus:border-white/20
+                        dark:focus:bg-white/[0.055]
+                        dark:focus:ring-white/[0.04]
+                      "
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword((value) => !value)}
+                      className="
+                        absolute right-3 top-1/2
+                        -translate-y-1/2
+                        text-[11px] font-semibold
+                        text-zinc-400 transition
+                        hover:text-zinc-700
+                        dark:text-white/35
+                        dark:hover:text-white/70
+                      "
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
+                  </div>
+                </div>
+
+                {message && (
+                  <div className="rounded-xl border border-red-500/15 bg-red-500/[0.06] px-4 py-3 text-xs text-red-600 dark:text-red-400">
+                    {message}
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="
+                    flex h-12 w-full items-center justify-center gap-2
+                    rounded-xl bg-zinc-950 px-4
+                    text-sm font-semibold text-white
+                    shadow-lg transition
+                    hover:bg-zinc-800
+                    active:scale-[0.99]
+                    disabled:cursor-not-allowed disabled:opacity-50
+                    dark:bg-white dark:text-black
+                    dark:hover:bg-white/90
+                  "
+                >
+                  {loading ? (
+                    <>
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                      Signing in...
+                    </>
+                  ) : (
+                    "Sign in"
+                  )}
+                </button>
+              </form>
+
+              <div className="my-8 flex items-center gap-3">
+                <span className="h-px flex-1 bg-black/[0.07] dark:bg-white/[0.08]" />
+                <span className="text-[9px] font-bold tracking-widest text-zinc-400 dark:text-white/25">
+                  OR
+                </span>
+                <span className="h-px flex-1 bg-black/[0.07] dark:bg-white/[0.08]" />
               </div>
 
-              {/* ERROR */}
-              {message && (
-                <div className="rounded-xl border border-red-500/20 bg-red-500/[0.07] px-3 py-2.5 text-[11px] leading-5 text-red-400">
-                  {message}
-                </div>
-              )}
-
-              {/* SUBMIT */}
-              <button
-                type="submit"
-                disabled={loading}
-                className="mt-1 flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-[var(--rtc-border-strong)] bg-[var(--rtc-text)] text-[12px] font-bold text-[var(--rtc-bg)] transition hover:opacity-90 active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-45"
-              >
-                {loading ? (
-                  <>
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-current border-r-transparent" />
-                    Signing in...
-                  </>
-                ) : (
-                  "Sign in"
-                )}
-              </button>
-            </form>
-
-            {/* DIVIDER */}
-            <div className="my-7 flex items-center gap-3">
-              <span className="h-px flex-1 bg-[var(--rtc-border)]" />
-              <span className="text-[9px] font-bold tracking-[0.12em] text-[var(--rtc-text-faint)]">
-                OR
-              </span>
-              <span className="h-px flex-1 bg-[var(--rtc-border)]" />
+              <p className="text-center text-xs text-zinc-500 dark:text-white/40">
+                Don't have an account?{" "}
+                <Link
+                  to="/register"
+                  className="ml-1 font-semibold text-zinc-900 hover:underline dark:text-white"
+                >
+                  Create an account
+                </Link>
+              </p>
             </div>
-
-            <p className="text-center text-[11px] text-[var(--rtc-text-muted)]">
-              Don't have an account?
-              <Link
-                to="/register"
-                className="ml-1 font-bold text-[var(--rtc-text)] hover:underline hover:underline-offset-4"
-              >
-                Create an account
-              </Link>
-            </p>
-          </div>
-        </section>
+          </section>
+        </div>
       </div>
     </main>
   );
