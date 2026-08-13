@@ -43,16 +43,18 @@ export default function ConversationList({
     (state) => state.onlineUserIds,
   );
 
-  const [conversations, setConversations] = useState<Conversation[]>(
-    [],
-  );
+  const [conversations, setConversations] = useState<
+    Conversation[]
+  >([]);
 
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [startingChat, setStartingChat] = useState<string | null>(null);
+  const [startingChat, setStartingChat] = useState<string | null>(
+    null,
+  );
 
   // ============================================================
   // LOAD CONVERSATIONS
@@ -89,11 +91,26 @@ export default function ConversationList({
         }
 
         if (!cancelled) {
-          setConversations(
+          const loadedConversations: Conversation[] =
             Array.isArray(data.conversations)
               ? data.conversations
-              : [],
-          );
+              : [];
+
+          // Remove duplicate conversation IDs.
+          const uniqueConversations: Conversation[] = [];
+
+          const seenConversationIds = new Set<string>();
+
+          for (const conversation of loadedConversations) {
+            if (seenConversationIds.has(conversation.id)) {
+              continue;
+            }
+
+            seenConversationIds.add(conversation.id);
+            uniqueConversations.push(conversation);
+          }
+
+          setConversations(uniqueConversations);
         }
       } catch (error) {
         if (!cancelled) {
@@ -101,6 +118,8 @@ export default function ConversationList({
             "Fetch conversations error:",
             error,
           );
+
+          setConversations([]);
         }
       } finally {
         if (!cancelled) {
@@ -189,8 +208,6 @@ export default function ConversationList({
             conversation.id === message.conversationId,
         );
 
-        // We don't have enough information to safely create
-        // a missing conversation entry here.
         if (!existing) {
           return previous;
         }
@@ -336,21 +353,20 @@ export default function ConversationList({
   const handleSelectConversation = async (
     conversation: Conversation,
   ) => {
+    const updatedConversation: Conversation = {
+      ...conversation,
+      unreadCount: 0,
+    };
+
     setConversations((previous) =>
       previous.map((item) =>
         item.id === conversation.id
-          ? {
-              ...item,
-              unreadCount: 0,
-            }
+          ? updatedConversation
           : item,
       ),
     );
 
-    onSelectConversation({
-      ...conversation,
-      unreadCount: 0,
-    });
+    onSelectConversation(updatedConversation);
 
     await markConversationRead(conversation.id);
   };
@@ -380,7 +396,8 @@ export default function ConversationList({
 
       setConversations((previous) => {
         const existingIndex = previous.findIndex(
-          (item) => item.id === normalizedConversation.id,
+          (item) =>
+            item.id === normalizedConversation.id,
         );
 
         if (existingIndex === -1) {
@@ -423,12 +440,15 @@ export default function ConversationList({
 
     if (!query) return [];
 
-    const existingUserIds = new Set(
-      conversations
-        .map(getOtherUser)
-        .filter(Boolean)
-        .map((user) => user!.id),
-    );
+    const existingUserIds = new Set<string>();
+
+    conversations.forEach((conversation) => {
+      const otherUser = getOtherUser(conversation);
+
+      if (otherUser) {
+        existingUserIds.add(otherUser.id);
+      }
+    });
 
     return users
       .filter(
@@ -460,7 +480,7 @@ export default function ConversationList({
   if (loading) {
     return (
       <div className="rtc-conversation-list">
-        <div className="rtc-conversation-loading">
+        <div className="rtc-muted-row">
           <span className="rtc-spinner" />
           <span>Loading conversations...</span>
         </div>
@@ -474,10 +494,11 @@ export default function ConversationList({
 
   return (
     <div className="rtc-conversation-list">
+
       {/* SEARCH */}
 
       <div className="rtc-conversation-search">
-        <div className="rtc-search-wrapper">
+        <div className="relative">
           <svg
             className="rtc-search-icon"
             viewBox="0 0 24 24"
@@ -505,8 +526,8 @@ export default function ConversationList({
             <button
               type="button"
               onClick={() => setSearch("")}
-              className="rtc-search-clear"
               aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-white/40 hover:text-white"
             >
               ×
             </button>
@@ -521,7 +542,7 @@ export default function ConversationList({
                 <span>Searching...</span>
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="rtc-search-empty">
+              <div className="rtc-muted-row">
                 No users found
               </div>
             ) : (
@@ -534,10 +555,12 @@ export default function ConversationList({
                     key={user.id}
                     className="rtc-search-user"
                   >
-                    <div className="rtc-avatar rtc-avatar-search">
-                      {user.username
-                        .slice(0, 2)
-                        .toUpperCase()}
+                    <div className="relative shrink-0">
+                      <div className="rtc-avatar rtc-avatar-search">
+                        {user.username
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </div>
 
                       <span
                         className={`rtc-status-dot ${
@@ -546,7 +569,7 @@ export default function ConversationList({
                       />
                     </div>
 
-                    <div className="rtc-user-info">
+                    <div className="min-w-0 flex-1">
                       <p className="rtc-user-name">
                         {user.username}
                       </p>
@@ -561,9 +584,7 @@ export default function ConversationList({
                       onClick={() =>
                         handleStartChat(user)
                       }
-                      disabled={
-                        startingChat !== null
-                      }
+                      disabled={startingChat !== null}
                       className="rtc-small-button"
                     >
                       {startingChat === user.id
@@ -596,7 +617,7 @@ export default function ConversationList({
             </p>
           </div>
         ) : (
-          <div className="rtc-conversation-items">
+          <div>
             {conversations.map((conversation) => {
               const otherUser =
                 getOtherUser(conversation);
@@ -637,7 +658,7 @@ export default function ConversationList({
                     <span className="rtc-selection-indicator" />
                   )}
 
-                  <div className="rtc-conversation-avatar-wrap">
+                  <div className="relative shrink-0">
                     <div
                       className={`rtc-avatar ${
                         isSelected
@@ -659,8 +680,8 @@ export default function ConversationList({
                     />
                   </div>
 
-                  <div className="rtc-conversation-content">
-                    <div className="rtc-conversation-top">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
                       <span
                         className={`rtc-conversation-name ${
                           isSelected
@@ -680,7 +701,7 @@ export default function ConversationList({
                       )}
                     </div>
 
-                    <div className="rtc-conversation-bottom">
+                    <div className="flex min-w-0 items-center gap-1.5">
                       <span
                         className={`rtc-conversation-status ${
                           isOnline
