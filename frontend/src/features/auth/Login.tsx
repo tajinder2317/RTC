@@ -6,12 +6,12 @@ import { useAuthStore } from "./authStore";
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
-
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,15 +24,12 @@ export default function Login() {
 
       login(data.token, data.user);
 
-      console.log("Login Successful:", data);
-
-      // Go directly to chat after successful login
       navigate("/chat", { replace: true });
     } catch (error) {
       if (error instanceof Error) {
         setMessage(error.message);
       } else {
-        setMessage("Login Failed");
+        setMessage("Login failed");
       }
     } finally {
       setLoading(false);
@@ -40,34 +37,120 @@ export default function Login() {
   };
 
   return (
-    <div>
-      <h1>Login</h1>
+    <main className="auth-page">
+      <div className="auth-shell">
+        {/* Brand panel */}
+        <section className="auth-hero">
+          <div className="auth-hero-content">
+            <div className="brand-mark">RTC</div>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          type="email"
-          placeholder="Email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-        />
+            <div className="hero-copy">
+              <span className="hero-eyebrow">REAL-TIME CHAT</span>
 
-        <input
-          type="password"
-          placeholder="Password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-        />
+              <h2>
+                Talk.
+                <br />
+                Connect.
+                <br />
+                Stay close.
+              </h2>
 
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging in..." : "Login"}
-        </button>
-      </form>
+              <p>
+                A simple place to have real-time conversations with the people
+                who matter.
+              </p>
+            </div>
 
-      {message && <p>{message}</p>}
+            <div className="hero-decoration">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </section>
 
-      <p>
-        Don't have an account? <Link to="/register">Register</Link>
-      </p>
-    </div>
+        {/* Login panel */}
+        <section className="auth-panel">
+          <div className="auth-content">
+            <div className="auth-heading">
+              <span className="mobile-brand-mark">RTC</span>
+
+              <h1>Welcome back</h1>
+              <p>Sign in to continue to your conversations.</p>
+            </div>
+
+            <form className="auth-form" onSubmit={handleSubmit}>
+              <div className="auth-field">
+                <label htmlFor="login-email">Email</label>
+
+                <input
+                  id="login-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className="auth-field">
+                <div className="field-label-row">
+                  <label htmlFor="login-password">Password</label>
+                </div>
+
+                <div className="password-input">
+                  <input
+                    id="login-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Enter your password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    className="password-button"
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              {message && <div className="auth-error">{message}</div>}
+
+              <button
+                className="auth-submit"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="button-spinner" />
+                    Signing in...
+                  </>
+                ) : (
+                  "Sign in"
+                )}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <span />
+              <p>OR</p>
+              <span />
+            </div>
+
+            <p className="auth-switch">
+              Don't have an account?
+              <Link to="/register">Create an account</Link>
+            </p>
+          </div>
+        </section>
+      </div>
+    </main>
   );
 }
