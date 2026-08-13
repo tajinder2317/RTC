@@ -746,3 +746,39 @@ button:disabled {
     animation-duration: 0.01ms !important;
   }
 }
+/* =========================================================
+   REGISTER PAGE
+   ========================================================= */
+
+.register-form {
+  gap: 18px;
+}
+
+.register-form .auth-field {
+  gap: 8px;
+}
+
+.register-form .auth-submit {
+  margin-top: 2px;
+}
+
+@media (max-width: 560px) {
+  .register-form {
+    gap: 17px;
+  }
+
+  .register-form .auth-field {
+    gap: 7px;
+  }
+
+  .register-form .auth-submit {
+    margin-top: 1px;
+  }
+
+  .auth-panel:has(.register-form) {
+    min-height: auto;
+    min-height: 100dvh;
+    padding-top: 28px;
+    padding-bottom: 32px;
+  }
+}

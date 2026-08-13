@@ -7,10 +7,9 @@ export default function Register() {
   const [username, setUsername] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
+  const [showPassword, setShowPassword] = useState(false);
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const login = useAuthStore((state) => state.login);
   const navigate = useNavigate();
@@ -18,35 +17,16 @@ export default function Register() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!username.trim() || !email.trim() || !password.trim()) {
-      setMessage("Please fill in all fields.");
-      return;
-    }
-
-    if (username.trim().length < 3) {
-      setMessage("Username must be at least 3 characters.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setMessage("Password must be at least 6 characters.");
-      return;
-    }
-
     setLoading(true);
     setMessage("");
 
     try {
-      const data = await registerUser(
-        username.trim(),
-        email.trim(),
-        password,
-      );
+      const data = await registerUser(username, email, password);
 
       if (data?.token && data?.user) {
         login(data.token, data.user);
       } else {
-        const loginData = await loginUser(email.trim(), password);
+        const loginData = await loginUser(email, password);
         login(loginData.token, loginData.user);
       }
 
@@ -55,7 +35,7 @@ export default function Register() {
       if (error instanceof Error) {
         setMessage(error.message);
       } else {
-        setMessage("Unable to create your account. Please try again.");
+        setMessage("Registration failed");
       }
     } finally {
       setLoading(false);
@@ -64,116 +44,131 @@ export default function Register() {
 
   return (
     <main className="auth-page">
-      <section className="auth-shell auth-shell-register">
-        <div className="auth-brand">
-          <div className="auth-logo">RTC</div>
+      <div className="auth-shell">
+        {/* Brand panel */}
+        <section className="auth-hero">
+          <div className="auth-hero-content">
+            <div className="brand-mark">RTC</div>
 
-          <div>
-            <h1>Join RTC</h1>
-            <p>Create your account and start chatting.</p>
-          </div>
-        </div>
+            <div className="hero-copy">
+              <span className="hero-eyebrow">REAL-TIME CHAT</span>
 
-        <div className="auth-card">
-          <div className="auth-heading">
-            <h2>Create your account</h2>
-            <p>It only takes a few seconds to get started.</p>
-          </div>
+              <h2>
+                Meet.
+                <br />
+                Message.
+                <br />
+                Connect.
+              </h2>
 
-          <form className="auth-form" onSubmit={handleSubmit}>
-            <div className="auth-field">
-              <label htmlFor="username">Username</label>
-
-              <input
-                id="username"
-                type="text"
-                placeholder="Choose a username"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
-                autoComplete="username"
-                disabled={loading}
-              />
+              <p>
+                Create your account and start having real-time conversations
+                with your friends.
+              </p>
             </div>
 
-            <div className="auth-field">
-              <label htmlFor="register-email">Email address</label>
+            <div className="hero-decoration">
+              <span />
+              <span />
+              <span />
+            </div>
+          </div>
+        </section>
 
-              <input
-                id="register-email"
-                type="email"
-                placeholder="you@example.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                autoComplete="email"
-                disabled={loading}
-              />
+        {/* Register panel */}
+        <section className="auth-panel">
+          <div className="auth-content">
+            <div className="auth-heading">
+              <span className="mobile-brand-mark">RTC</span>
+
+              <h1>Create your account</h1>
+              <p>It only takes a moment to get started.</p>
             </div>
 
-            <div className="auth-field">
-              <label htmlFor="register-password">Password</label>
+         <form className="auth-form register-form" onSubmit={handleSubmit}>
+              <div className="auth-field">
+                <label htmlFor="register-username">Username</label>
 
-              <div className="password-wrapper">
                 <input
-                  id="register-password"
-                  type={showPassword ? "text" : "password"}
-                  placeholder="Create a secure password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  autoComplete="new-password"
-                  disabled={loading}
+                  id="register-username"
+                  type="text"
+                  placeholder="Choose a username"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  autoComplete="username"
+                  required
                 />
-
-                <button
-                  type="button"
-                  className="password-toggle"
-                  onClick={() => setShowPassword((value) => !value)}
-                  tabIndex={-1}
-                >
-                  {showPassword ? "Hide" : "Show"}
-                </button>
               </div>
 
-              <span className="auth-hint">
-                Use at least 6 characters.
-              </span>
+              <div className="auth-field">
+                <label htmlFor="register-email">Email</label>
+
+                <input
+                  id="register-email"
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  autoComplete="email"
+                  required
+                />
+              </div>
+
+              <div className="auth-field">
+                <label htmlFor="register-password">Password</label>
+
+                <div className="password-input">
+                  <input
+                    id="register-password"
+                    type={showPassword ? "text" : "password"}
+                    placeholder="Create a password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="new-password"
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    className="password-button"
+                    onClick={() => setShowPassword((value) => !value)}
+                  >
+                    {showPassword ? "Hide" : "Show"}
+                  </button>
+                </div>
+              </div>
+
+              {message && <div className="auth-error">{message}</div>}
+
+              <button
+                className="auth-submit"
+                type="submit"
+                disabled={loading}
+              >
+                {loading ? (
+                  <>
+                    <span className="button-spinner" />
+                    Creating account...
+                  </>
+                ) : (
+                  "Create account"
+                )}
+              </button>
+            </form>
+
+            <div className="auth-divider">
+              <span />
+              <p>OR</p>
+              <span />
             </div>
 
-            {message && (
-              <div className="auth-error" role="alert">
-                <span className="auth-error-icon">!</span>
-                <span>{message}</span>
-              </div>
-            )}
-
-            <button
-              className="auth-submit"
-              type="submit"
-              disabled={loading}
-            >
-              {loading ? (
-                <>
-                  <span className="auth-spinner" />
-                  Creating account...
-                </>
-              ) : (
-                "Create account"
-              )}
-            </button>
-          </form>
-
-          <div className="auth-divider">
-            <span>Already have an account?</span>
+            <p className="auth-switch">
+              Already have an account?
+              <Link to="/login">Sign in</Link>
+            </p>
           </div>
-
-          <Link className="auth-secondary-button" to="/login">
-            Sign in instead
-          </Link>
-        </div>
-
-        <p className="auth-bottom-text">
-          Fast. Private. Real-time.
-        </p>
-      </section>
+        </section>
+      </div>
     </main>
   );
 }
