@@ -1,89 +1,83 @@
 @import "tailwindcss";
 
 /* =========================================================
-   RTC CHAT
-   Production-style responsive chat UI
-   Desktop + Android / Mobile
+   RTC CHAT — GLOBAL
    ========================================================= */
-
-* {
-  box-sizing: border-box;
-}
 
 html,
 body,
 #root {
   width: 100%;
-  min-width: 0;
+  min-height: 100%;
   margin: 0;
 }
 
 body {
-  min-height: 100vh;
-  background: #050505;
+  overflow-x: hidden;
 }
 
 /* =========================================================
-   THEME
+   DESKTOP / BASE
    ========================================================= */
 
 .rtc-chat-shell {
-  --rtc-bg: #050505;
-  --rtc-panel: rgba(255, 255, 255, 0.035);
-  --rtc-panel-strong: rgba(255, 255, 255, 0.06);
+  --rtc-bg: #08090d;
+  --rtc-overlay: rgba(12, 14, 20, 0.82);
   --rtc-surface: rgba(255, 255, 255, 0.055);
-  --rtc-surface-hover: rgba(255, 255, 255, 0.075);
-
+  --rtc-surface-strong: rgba(255, 255, 255, 0.085);
   --rtc-border: rgba(255, 255, 255, 0.09);
-  --rtc-border-strong: rgba(255, 255, 255, 0.14);
-
-  --rtc-text: #ffffff;
-  --rtc-text-soft: rgba(255, 255, 255, 0.72);
-  --rtc-text-muted: rgba(255, 255, 255, 0.42);
-  --rtc-text-faint: rgba(255, 255, 255, 0.28);
-
-  --rtc-input: rgba(255, 255, 255, 0.055);
-  --rtc-input-focus: rgba(255, 255, 255, 0.075);
-
-  --rtc-selected: rgba(255, 255, 255, 0.07);
-  --rtc-overlay: rgba(5, 5, 5, 0.72);
-
-  --rtc-shadow: rgba(0, 0, 0, 0.35);
-  --rtc-inset: rgba(255, 255, 255, 0.035);
+  --rtc-text: #f5f7fb;
+  --rtc-text-muted: #9298a7;
+  --rtc-accent: #7c5cff;
+  --rtc-accent-soft: rgba(124, 92, 255, 0.16);
+  --rtc-shadow: rgba(0, 0, 0, 0.28);
 
   width: 100%;
   height: 100dvh;
-  min-height: 0;
+  min-height: 100dvh;
 
   overflow: hidden;
 
-  background: var(--rtc-bg);
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(124, 92, 255, 0.12),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 80%,
+      rgba(56, 189, 248, 0.07),
+      transparent 30%
+    ),
+    var(--rtc-bg);
+
   color: var(--rtc-text);
 }
 
-.rtc-chat-shell[data-theme="light"] {
-  --rtc-bg: #f5f5f7;
-  --rtc-panel: rgba(255, 255, 255, 0.62);
-  --rtc-panel-strong: rgba(255, 255, 255, 0.78);
-  --rtc-surface: rgba(255, 255, 255, 0.68);
-  --rtc-surface-hover: rgba(255, 255, 255, 0.88);
-
+.rtc-theme-light {
+  --rtc-bg: #f5f7fb;
+  --rtc-overlay: rgba(255, 255, 255, 0.84);
+  --rtc-surface: rgba(255, 255, 255, 0.72);
+  --rtc-surface-strong: rgba(255, 255, 255, 0.94);
   --rtc-border: rgba(15, 23, 42, 0.09);
-  --rtc-border-strong: rgba(15, 23, 42, 0.14);
-
   --rtc-text: #111827;
-  --rtc-text-soft: rgba(17, 24, 39, 0.72);
-  --rtc-text-muted: rgba(17, 24, 39, 0.46);
-  --rtc-text-faint: rgba(17, 24, 39, 0.3);
-
-  --rtc-input: rgba(255, 255, 255, 0.72);
-  --rtc-input-focus: rgba(255, 255, 255, 0.92);
-
-  --rtc-selected: rgba(15, 23, 42, 0.055);
-  --rtc-overlay: rgba(255, 255, 255, 0.72);
-
+  --rtc-text-muted: #6b7280;
+  --rtc-accent: #6d4aff;
+  --rtc-accent-soft: rgba(109, 74, 255, 0.1);
   --rtc-shadow: rgba(15, 23, 42, 0.1);
-  --rtc-inset: rgba(255, 255, 255, 0.8);
+
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(124, 92, 255, 0.1),
+      transparent 32%
+    ),
+    radial-gradient(
+      circle at 90% 80%,
+      rgba(56, 189, 248, 0.07),
+      transparent 30%
+    ),
+    var(--rtc-bg);
 }
 
 /* =========================================================
@@ -91,82 +85,83 @@ body {
    ========================================================= */
 
 .rtc-header {
+  position: relative;
+  z-index: 50;
+
   display: flex;
+  align-items: center;
+  justify-content: space-between;
 
   width: 100%;
   height: 68px;
 
-  flex-shrink: 0;
-  align-items: center;
-  justify-content: space-between;
-
-  padding: 0 1rem;
+  padding: 0 24px;
 
   border-bottom: 1px solid var(--rtc-border);
 
   background: var(--rtc-overlay);
 
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
 }
 
 .rtc-brand-mark {
   display: flex;
+  align-items: center;
+  justify-content: center;
 
   width: 40px;
   height: 40px;
 
-  align-items: center;
-  justify-content: center;
-
-  border: 1px solid var(--rtc-border-strong);
-  border-radius: 13px;
-
-  background: var(--rtc-surface);
-  color: var(--rtc-text);
-
-  font-size: 12px;
-  font-weight: 800;
-
-  box-shadow: 0 8px 30px var(--rtc-shadow);
-}
-
-.rtc-header-title {
-  color: var(--rtc-text);
-
-  font-size: 15px;
-  font-weight: 700;
-
-  letter-spacing: -0.02em;
-}
-
-.rtc-header-subtitle {
-  display: none;
-
-  margin-top: 2px;
-
-  color: var(--rtc-text-muted);
-
-  font-size: 11px;
-  font-weight: 500;
-}
-
-.rtc-header-button {
-  display: flex;
-
-  height: 40px;
-
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-
-  padding: 0 13px;
+  flex-shrink: 0;
 
   border: 1px solid var(--rtc-border);
   border-radius: 12px;
 
+  background: var(--rtc-accent-soft);
+
+  color: var(--rtc-accent);
+
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.05em;
+
+  box-shadow:
+    0 8px 24px rgba(124, 92, 255, 0.12);
+}
+
+.rtc-header-title {
+  margin: 0;
+
+  font-size: 15px;
+  font-weight: 700;
+
+  color: var(--rtc-text);
+}
+
+.rtc-header-subtitle {
+  margin: 2px 0 0;
+
+  font-size: 11px;
+  color: var(--rtc-text-muted);
+}
+
+.rtc-header-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+
+  min-height: 38px;
+
+  padding: 0 13px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 11px;
+
   background: var(--rtc-surface);
-  color: var(--rtc-text-soft);
+
+  color: var(--rtc-text);
 
   font-size: 12px;
   font-weight: 600;
@@ -176,35 +171,31 @@ body {
   transition:
     background 160ms ease,
     border-color 160ms ease,
-    color 160ms ease,
     transform 160ms ease;
 }
 
 .rtc-header-button:hover {
-  background: var(--rtc-surface-hover);
-  border-color: var(--rtc-border-strong);
-  color: var(--rtc-text);
+  background: var(--rtc-surface-strong);
 }
 
 .rtc-header-button:active {
-  transform: scale(0.97);
+  transform: scale(0.96);
 }
 
 .rtc-count-badge {
-  display: flex;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 
   min-width: 20px;
   height: 20px;
 
-  align-items: center;
-  justify-content: center;
-
-  padding: 0 6px;
+  padding: 0 5px;
 
   border-radius: 999px;
 
-  background: var(--rtc-text);
-  color: var(--rtc-bg);
+  background: var(--rtc-accent);
+  color: white;
 
   font-size: 10px;
   font-weight: 700;
@@ -218,33 +209,33 @@ body {
   width: 100%;
   height: calc(100dvh - 68px);
 
-  min-height: 0;
-
-  padding: 8px;
+  padding: 22px;
 
   overflow: hidden;
 }
 
 .rtc-chat-frame {
-  display: flex;
+  display: grid;
 
-  width: 100%;
-  max-width: 1500px;
+  width: min(1500px, 100%);
   height: 100%;
 
-  min-width: 0;
-  min-height: 0;
-
   margin: 0 auto;
+
+  /*
+   * SIDEBAR IS NOW A LITTLE WIDER.
+   */
+  grid-template-columns: 360px minmax(0, 1fr);
 
   overflow: hidden;
 
   border: 1px solid var(--rtc-border);
   border-radius: 22px;
 
-  background: var(--rtc-panel);
+  background: var(--rtc-surface);
 
-  box-shadow: 0 30px 100px var(--rtc-shadow);
+  box-shadow:
+    0 24px 80px var(--rtc-shadow);
 
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
@@ -255,31 +246,24 @@ body {
    ========================================================= */
 
 .rtc-sidebar {
-  display: flex;
+  position: relative;
 
-  width: 285px;
-  height: 100%;
+  display: flex;
+  flex-direction: column;
 
   min-width: 0;
   min-height: 0;
 
-  flex-shrink: 0;
-  flex-direction: column;
-
   border-right: 1px solid var(--rtc-border);
 
-  background: var(--rtc-panel);
+  background: rgba(255, 255, 255, 0.025);
 }
 
 .rtc-sidebar-header {
   display: flex;
-
-  width: 100%;
-  height: 68px;
-
-  flex-shrink: 0;
-
   align-items: center;
+
+  min-height: 72px;
 
   padding: 0 20px;
 
@@ -287,210 +271,23 @@ body {
 }
 
 .rtc-section-title {
-  color: var(--rtc-text);
+  margin: 0;
 
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
+
+  color: var(--rtc-text);
 }
 
 .rtc-section-subtitle {
-  margin-top: 2px;
-
-  color: var(--rtc-text-muted);
+  margin: 3px 0 0;
 
   font-size: 11px;
-  font-weight: 500;
-}
-
-/* =========================================================
-   QUICK CHAT
-   ========================================================= */
-
-.rtc-quick-chat {
-  flex-shrink: 0;
-
-  padding: 16px;
-
-  border-top: 1px solid var(--rtc-border);
-
-  background: var(--rtc-panel);
-}
-
-.rtc-eyebrow {
   color: var(--rtc-text-muted);
-
-  font-size: 10px;
-  font-weight: 700;
-
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-}
-
-.rtc-quick-label {
-  padding: 2px 6px;
-
-  border: 1px solid var(--rtc-border);
-  border-radius: 6px;
-
-  background: var(--rtc-surface);
-
-  color: var(--rtc-text-faint);
-
-  font-size: 10px;
-}
-
-.rtc-quick-user {
-  display: flex;
-
-  align-items: center;
-  gap: 12px;
-
-  padding: 10px;
-
-  border: 1px solid var(--rtc-border);
-  border-radius: 16px;
-
-  background: var(--rtc-surface);
-
-  box-shadow: inset 0 1px 0 var(--rtc-inset);
-
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 /* =========================================================
-   CONVERSATION LIST
-   ========================================================= */
-
-.rtc-conversation-list {
-  display: flex;
-
-  height: 100%;
-  min-height: 0;
-
-  flex-direction: column;
-}
-
-.rtc-conversation-search {
-  position: relative;
-
-  flex-shrink: 0;
-
-  padding: 12px;
-
-  border-bottom: 1px solid var(--rtc-border);
-}
-
-.rtc-search-icon {
-  position: absolute;
-
-  top: 50%;
-  left: 24px;
-
-  width: 16px;
-  height: 16px;
-
-  transform: translateY(-50%);
-
-  color: var(--rtc-text-muted);
-
-  pointer-events: none;
-}
-
-.rtc-search-input {
-  width: 100%;
-  height: 40px;
-
-  padding: 0 12px 0 36px;
-
-  border: 1px solid var(--rtc-border);
-  border-radius: 12px;
-
-  outline: none;
-
-  background: var(--rtc-input);
-  color: var(--rtc-text);
-
-  font-size: 12px;
-
-  transition:
-    background 160ms ease,
-    border-color 160ms ease,
-    box-shadow 160ms ease;
-}
-
-.rtc-search-input::placeholder {
-  color: var(--rtc-text-faint);
-}
-
-.rtc-search-input:focus {
-  background: var(--rtc-input-focus);
-
-  border-color: var(--rtc-border-strong);
-
-  box-shadow: 0 0 0 3px var(--rtc-selected);
-}
-
-.rtc-search-results {
-  position: absolute;
-
-  z-index: 20;
-
-  top: calc(100% - 1px);
-  right: 12px;
-  left: 12px;
-
-  max-height: 220px;
-
-  overflow-y: auto;
-
-  border: 1px solid var(--rtc-border);
-  border-radius: 14px;
-
-  background: var(--rtc-overlay);
-
-  box-shadow: 0 20px 50px var(--rtc-shadow);
-
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.rtc-search-user {
-  display: flex;
-
-  align-items: center;
-  gap: 10px;
-
-  min-height: 58px;
-
-  padding: 10px 12px;
-
-  border-bottom: 1px solid var(--rtc-border);
-
-  background: transparent;
-
-  transition: background 140ms ease;
-}
-
-.rtc-search-user:last-child {
-  border-bottom: 0;
-}
-
-.rtc-search-user:hover {
-  background: var(--rtc-surface);
-}
-
-.rtc-avatar-search {
-  width: 34px;
-  height: 34px;
-
-  flex-shrink: 0;
-
-  font-size: 10px;
-}
-
-/* =========================================================
-   CONVERSATION ROW
+   CONVERSATION LIST WRAPPER
    ========================================================= */
 
 .rtc-conversation-scroll {
@@ -500,35 +297,27 @@ body {
 
   overflow-y: auto;
 
-  overscroll-behavior: contain;
+  scrollbar-width: thin;
 }
 
+/* =========================================================
+   CONVERSATION ITEM
+   ========================================================= */
+
 .rtc-conversation-item {
-  position: relative;
-
-  display: flex;
-
   width: 100%;
   min-width: 0;
-  min-height: 66px;
 
+  display: flex;
   align-items: center;
+
   gap: 12px;
 
   padding: 12px 16px;
 
-  border: 0;
-
-  background: transparent;
-  color: inherit;
-
-  text-align: left;
-
-  cursor: pointer;
-
   transition:
-    background 140ms ease,
-    transform 140ms ease;
+    background 160ms ease,
+    transform 160ms ease;
 }
 
 .rtc-conversation-item:hover {
@@ -539,364 +328,199 @@ body {
   transform: scale(0.995);
 }
 
-.rtc-conversation-item.is-selected {
-  background: var(--rtc-selected);
-}
-
-.rtc-selection-indicator {
-  position: absolute;
-
-  top: 9px;
-  bottom: 9px;
-  left: 0;
-
-  width: 2px;
-
-  border-radius: 0 999px 999px 0;
-
-  background: var(--rtc-text);
-}
-
-.rtc-conversation-item .rtc-avatar {
-  width: 42px;
-  height: 42px;
-
-  flex-shrink: 0;
-}
-
-.rtc-conversation-name {
-  display: block;
-
-  min-width: 0;
-
-  overflow: hidden;
-
-  color: var(--rtc-text-soft);
-
-  font-size: 12px;
-  font-weight: 650;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.rtc-conversation-name.is-selected {
-  color: var(--rtc-text);
-}
-
-.rtc-conversation-status {
-  flex-shrink: 0;
-
-  color: var(--rtc-text-faint);
-
-  font-size: 9px;
-  line-height: 1;
-}
-
-.rtc-conversation-status.is-online {
-  color: #10b981;
-}
-
-.rtc-separator {
-  flex-shrink: 0;
-
-  color: var(--rtc-text-faint);
-
-  font-size: 9px;
-}
-
-.rtc-last-message {
-  min-width: 0;
-
-  overflow: hidden;
-
-  color: var(--rtc-text-muted);
-
-  font-size: 11px;
-  line-height: 1.3;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
 /* =========================================================
-   AVATARS
+   SEARCH
    ========================================================= */
 
-.rtc-avatar {
-  display: flex;
+.rtc-conversation-search {
+  position: relative;
 
-  width: 40px;
-  height: 40px;
+  padding: 12px 14px;
 
-  align-items: center;
-  justify-content: center;
+  border-bottom: 1px solid var(--rtc-border);
+}
+
+.rtc-search-input {
+  width: 100%;
+  height: 44px;
+
+  padding: 0 14px 0 46px;
 
   border: 1px solid var(--rtc-border);
-  border-radius: 999px;
+  border-radius: 13px;
+
+  outline: none;
 
   background: var(--rtc-surface);
 
-  color: var(--rtc-text-soft);
+  color: var(--rtc-text);
 
-  font-size: 11px;
-  font-weight: 700;
+  font-size: 13px;
+
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    box-shadow 160ms ease;
 }
 
-.rtc-avatar-small {
-  width: 36px;
-  height: 36px;
+.rtc-search-input::placeholder {
+  color: var(--rtc-text-muted);
 }
 
-.rtc-avatar.is-selected {
-  border-color: var(--rtc-border-strong);
+.rtc-search-input:focus {
+  border-color: rgba(124, 92, 255, 0.45);
 
-  background: var(--rtc-text);
-  color: var(--rtc-bg);
+  background: var(--rtc-surface-strong);
+
+  box-shadow:
+    0 0 0 3px rgba(124, 92, 255, 0.08);
 }
 
-.rtc-status-dot {
+.rtc-search-icon {
   position: absolute;
 
-  right: 0;
-  bottom: 0;
+  left: 29px;
+  top: 50%;
 
-  width: 10px;
-  height: 10px;
+  width: 17px;
+  height: 17px;
 
-  border: 2px solid var(--rtc-bg);
-  border-radius: 999px;
+  transform: translateY(-50%);
 
-  background: var(--rtc-text-faint);
-}
+  pointer-events: none;
 
-.rtc-status-dot.is-online {
-  background: #10b981;
+  color: var(--rtc-text-muted);
 }
 
 /* =========================================================
-   SHARED
+   QUICK CHAT
    ========================================================= */
 
-.rtc-user-name {
-  overflow: hidden;
+.rtc-quick-chat {
+  flex-shrink: 0;
 
-  color: var(--rtc-text-soft);
+  padding: 14px;
 
-  font-size: 12px;
-  font-weight: 600;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  border-top: 1px solid var(--rtc-border);
 }
 
-.rtc-user-email {
-  overflow: hidden;
-
-  margin-top: 2px;
-
-  color: var(--rtc-text-faint);
+.rtc-eyebrow {
+  margin: 0;
 
   font-size: 10px;
+  font-weight: 800;
 
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+
+  color: var(--rtc-text-muted);
+}
+
+.rtc-quick-label {
+  font-size: 9px;
+  font-weight: 700;
+
+  padding: 4px 7px;
+
+  border-radius: 999px;
+
+  background: var(--rtc-accent-soft);
+  color: var(--rtc-accent);
+}
+
+.rtc-quick-user {
+  display: flex;
+  align-items: center;
+
+  gap: 10px;
+
+  min-height: 54px;
+
+  padding: 8px 10px;
+
+  border: 1px solid transparent;
+  border-radius: 13px;
+
+  background: var(--rtc-surface);
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease;
+}
+
+.rtc-quick-user:hover {
+  background: var(--rtc-surface-strong);
+  border-color: var(--rtc-border);
 }
 
 .rtc-small-button {
-  flex-shrink: 0;
-
+  min-width: 58px;
   min-height: 34px;
 
-  padding: 6px 10px;
+  padding: 0 11px;
 
   border: 1px solid var(--rtc-border);
-  border-radius: 8px;
+  border-radius: 9px;
 
-  background: var(--rtc-surface);
-  color: var(--rtc-text-soft);
+  background: var(--rtc-accent-soft);
+  color: var(--rtc-accent);
 
   font-size: 10px;
   font-weight: 700;
 
   cursor: pointer;
-
-  transition:
-    background 140ms ease,
-    border-color 140ms ease,
-    color 140ms ease,
-    transform 140ms ease;
-}
-
-.rtc-small-button:hover:not(:disabled) {
-  background: var(--rtc-surface-hover);
-
-  border-color: var(--rtc-border-strong);
-
-  color: var(--rtc-text);
-}
-
-.rtc-small-button:active:not(:disabled) {
-  transform: scale(0.96);
-}
-
-.rtc-small-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.4;
-}
-
-.rtc-muted-row {
-  display: flex;
-
-  align-items: center;
-  gap: 8px;
-
-  padding: 12px;
-
-  color: var(--rtc-text-muted);
-
-  font-size: 12px;
-}
-
-.rtc-muted-text {
-  color: var(--rtc-text-faint);
-
-  font-size: 12px;
-}
-
-.rtc-muted-title {
-  color: var(--rtc-text-muted);
-
-  font-size: 12px;
-  font-weight: 500;
-}
-
-.rtc-muted-description {
-  margin-top: 4px;
-
-  color: var(--rtc-text-faint);
-
-  font-size: 10px;
-}
-
-.rtc-spinner {
-  width: 12px;
-  height: 12px;
-
-  flex-shrink: 0;
-
-  border: 2px solid var(--rtc-border);
-  border-top-color: var(--rtc-text-soft);
-
-  border-radius: 999px;
-
-  animation: rtc-spin 700ms linear infinite;
-}
-
-@keyframes rtc-spin {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* =========================================================
-   EMPTY STATES
+   AVATARS / PRESENCE
    ========================================================= */
 
-.rtc-no-conversations {
-  padding: 40px 20px;
-
-  text-align: center;
-}
-
-.rtc-empty-small-icon {
+.rtc-avatar {
   display: flex;
-
-  width: 44px;
-  height: 44px;
-
   align-items: center;
   justify-content: center;
 
-  margin: 0 auto 12px;
+  width: 42px;
+  height: 42px;
 
-  border: 1px solid var(--rtc-border);
-  border-radius: 12px;
+  flex-shrink: 0;
 
-  background: var(--rtc-surface);
+  border-radius: 13px;
 
-  font-size: 18px;
+  background: var(--rtc-accent-soft);
+  color: var(--rtc-accent);
+
+  font-size: 11px;
+  font-weight: 800;
 }
 
-.rtc-empty-state {
-  display: flex;
+.rtc-avatar-small {
+  width: 38px;
+  height: 38px;
 
-  width: 100%;
-  height: 100%;
-
-  align-items: center;
-  justify-content: center;
-
-  padding: 32px;
-
-  text-align: center;
+  border-radius: 11px;
 }
 
-.rtc-empty-icon {
-  display: flex;
+.rtc-status-dot {
+  position: absolute;
 
-  width: 64px;
-  height: 64px;
+  right: -1px;
+  bottom: -1px;
 
-  align-items: center;
-  justify-content: center;
+  width: 10px;
+  height: 10px;
 
-  margin: 0 auto 20px;
+  border: 2px solid var(--rtc-bg);
+  border-radius: 50%;
 
-  border: 1px solid var(--rtc-border);
-  border-radius: 20px;
-
-  background: var(--rtc-surface);
-
-  font-size: 24px;
-
-  box-shadow: 0 20px 50px var(--rtc-shadow);
-
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: #6b7280;
 }
 
-.rtc-empty-title {
-  color: var(--rtc-text);
+.rtc-status-dot.is-online {
+  background: #22c55e;
 
-  font-size: 18px;
-  font-weight: 700;
-}
-
-.rtc-empty-description {
-  max-width: 380px;
-
-  margin-top: 8px;
-
-  color: var(--rtc-text-muted);
-
-  font-size: 14px;
-  line-height: 1.6;
-}
-
-.rtc-empty-message-title {
-  color: var(--rtc-text-soft);
-
-  font-size: 14px;
-  font-weight: 500;
-}
-
-.rtc-empty-message-description {
-  margin-top: 4px;
-
-  color: var(--rtc-text-faint);
-
-  font-size: 12px;
+  box-shadow:
+    0 0 0 3px rgba(34, 197, 94, 0.12);
 }
 
 /* =========================================================
@@ -904,27 +528,31 @@ body {
    ========================================================= */
 
 .rtc-chat-panel {
+  position: relative;
+
   display: flex;
+  flex-direction: column;
 
   min-width: 0;
   min-height: 0;
 
-  flex: 1;
-
-  flex-direction: column;
+  overflow: hidden;
 
   background: var(--rtc-bg);
 }
 
+/* =========================================================
+   CHAT HEADER
+   ========================================================= */
+
 .rtc-chat-header {
   display: flex;
+  align-items: center;
 
   width: 100%;
-  height: 68px;
+  min-height: 68px;
 
   flex-shrink: 0;
-
-  align-items: center;
 
   padding: 0 20px;
 
@@ -937,66 +565,40 @@ body {
 }
 
 .rtc-chat-user {
-  min-width: 0;
-
-  overflow: hidden;
-
-  color: var(--rtc-text);
+  margin: 0;
 
   font-size: 14px;
   font-weight: 700;
-
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .rtc-presence {
   display: flex;
-
   align-items: center;
-  gap: 6px;
 
-  margin-top: 2px;
+  gap: 5px;
 
-  color: var(--rtc-text-faint);
+  margin-top: 3px;
 
-  font-size: 11px;
-  font-weight: 500;
+  font-size: 10px;
+
+  color: var(--rtc-text-muted);
 }
 
 .rtc-presence.is-online {
-  color: #10b981;
+  color: #22c55e;
 }
 
 .rtc-presence-dot {
   width: 6px;
   height: 6px;
 
-  flex-shrink: 0;
+  border-radius: 50%;
 
-  border-radius: 999px;
-
-  background: var(--rtc-text-faint);
+  background: currentColor;
 }
-
-.rtc-presence.is-online .rtc-presence-dot {
-  background: #10b981;
-}
-
-/* =========================================================
-   MOBILE BACK BUTTON
-   ========================================================= */
 
 .rtc-mobile-back {
   display: none;
-
-  border: 0;
-
-  background: transparent;
-
-  color: var(--rtc-text);
-
-  cursor: pointer;
 }
 
 /* =========================================================
@@ -1011,115 +613,88 @@ body {
 
   overflow-y: auto;
 
-  padding: 20px 16px;
+  padding: 22px;
 
-  background: var(--rtc-bg);
-
-  overscroll-behavior: contain;
-
-  scrollbar-width: thin;
-  scrollbar-color:
-    var(--rtc-text-faint)
-    transparent;
+  -webkit-overflow-scrolling: touch;
 }
 
-.rtc-messages::-webkit-scrollbar,
-.rtc-conversation-scroll::-webkit-scrollbar {
-  width: 6px;
-}
-
-.rtc-messages::-webkit-scrollbar-track,
-.rtc-conversation-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.rtc-messages::-webkit-scrollbar-thumb,
-.rtc-conversation-scroll::-webkit-scrollbar-thumb {
-  border-radius: 999px;
-
-  background: var(--rtc-text-faint);
-}
-
-.rtc-messages::-webkit-scrollbar-thumb:hover,
-.rtc-conversation-scroll::-webkit-scrollbar-thumb:hover {
-  background: var(--rtc-text-muted);
+.rtc-messages > div {
+  width: 100%;
+  max-width: 900px;
 }
 
 .rtc-message {
-  max-width: 78%;
+  max-width: min(72%, 620px);
 
-  padding: 10px 16px;
+  padding: 10px 14px;
 
-  border: 1px solid var(--rtc-border);
-  border-radius: 20px;
+  border-radius: 17px;
 
-  box-shadow: 0 8px 30px var(--rtc-shadow);
+  box-shadow:
+    0 5px 18px var(--rtc-shadow);
 
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  animation: rtc-message-in 180ms ease;
 }
 
 .rtc-message.is-mine {
-  border-bottom-right-radius: 6px;
+  border-bottom-right-radius: 5px;
 
-  background: var(--rtc-surface);
-  color: var(--rtc-text);
+  background: var(--rtc-accent);
+  color: white;
 }
 
 .rtc-message.is-theirs {
-  border-bottom-left-radius: 6px;
+  border-bottom-left-radius: 5px;
 
-  background: var(--rtc-panel);
-  color: var(--rtc-text-soft);
+  background: var(--rtc-surface-strong);
+  color: var(--rtc-text);
 }
 
 .rtc-message p {
-  overflow-wrap: anywhere;
-
-  white-space: pre-wrap;
+  margin: 0;
 
   font-size: 13px;
-  line-height: 1.55;
+  line-height: 1.5;
+
+  overflow-wrap: anywhere;
 }
 
 .rtc-message-status {
-  display: flex;
+  margin-top: 3px;
 
-  justify-content: flex-end;
-
-  margin-top: 4px;
-
-  color: var(--rtc-text-faint);
+  text-align: right;
 
   font-size: 9px;
-  font-weight: 600;
+
+  opacity: 0.7;
 }
 
 .rtc-message-status .is-read {
-  color: var(--rtc-text-soft);
+  color: #a5f3fc;
 }
 
 /* =========================================================
-   TYPING + COMPOSER
+   TYPING
    ========================================================= */
 
 .rtc-typing-bar {
   flex-shrink: 0;
 
-  padding: 8px 20px;
+  padding: 6px 18px;
 
   border-top: 1px solid var(--rtc-border);
 
   background: var(--rtc-overlay);
-
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
 }
+
+/* =========================================================
+   COMPOSER
+   ========================================================= */
 
 .rtc-composer {
   flex-shrink: 0;
 
-  padding: 12px;
+  padding: 10px 18px 14px;
 
   border-top: 1px solid var(--rtc-border);
 
@@ -1129,126 +704,156 @@ body {
   -webkit-backdrop-filter: blur(24px);
 }
 
+.rtc-composer > div {
+  width: 100%;
+  max-width: 900px;
+  margin: 0 auto;
+}
+
 /* =========================================================
-   MESSAGE INPUT
+   EMPTY STATES
    ========================================================= */
 
-.rtc-message-input {
+.rtc-empty-state {
   display: flex;
-
-  width: 100%;
-
-  align-items: center;
-  gap: 8px;
-
-  padding: 6px;
-
-  border: 1px solid var(--rtc-border);
-  border-radius: 18px;
-
-  background: var(--rtc-input);
-
-  box-shadow: 0 10px 40px var(--rtc-shadow);
-
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-}
-
-.rtc-message-input input {
-  min-width: 0;
-
-  flex: 1;
-
-  height: 44px;
-
-  padding: 0 12px;
-
-  border: 0;
-  outline: 0;
-
-  background: transparent;
-  color: var(--rtc-text);
-
-  font-size: 13px;
-}
-
-.rtc-message-input input::placeholder {
-  color: var(--rtc-text-faint);
-}
-
-.rtc-message-input button {
-  display: flex;
-
-  width: 44px;
-  height: 44px;
-
-  flex-shrink: 0;
-
   align-items: center;
   justify-content: center;
 
-  border: 1px solid var(--rtc-border);
-  border-radius: 14px;
+  width: 100%;
+  height: 100%;
 
-  background: var(--rtc-text);
-  color: var(--rtc-bg);
+  padding: 24px;
 
-  cursor: pointer;
-
-  transition:
-    opacity 160ms ease,
-    transform 160ms ease;
+  text-align: center;
 }
 
-.rtc-message-input button:hover:not(:disabled) {
-  opacity: 0.88;
+.rtc-empty-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  width: 64px;
+  height: 64px;
+
+  margin: 0 auto 18px;
+
+  border-radius: 20px;
+
+  background: var(--rtc-accent-soft);
+
+  font-size: 25px;
 }
 
-.rtc-message-input button:active:not(:disabled) {
-  transform: scale(0.96);
+.rtc-empty-title {
+  margin: 0;
+
+  font-size: 17px;
+  font-weight: 700;
 }
 
-.rtc-message-input button:disabled {
-  cursor: not-allowed;
+.rtc-empty-description {
+  max-width: 360px;
 
-  background: var(--rtc-surface);
-  color: var(--rtc-text-faint);
+  margin: 7px auto 0;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.rtc-empty-message-title {
+  margin: 0;
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rtc-empty-message-description {
+  margin: 5px 0 0;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 12px;
 }
 
 /* =========================================================
-   DESKTOP
+   MISC
    ========================================================= */
 
-@media (min-width: 768px) {
-  .rtc-header {
-    padding: 0 28px;
-  }
+.rtc-muted-text {
+  margin: 0;
 
-  .rtc-main {
-    padding: 16px;
-  }
+  color: var(--rtc-text-muted);
 
-  .rtc-messages {
-    padding-right: 24px;
-    padding-left: 24px;
-  }
+  font-size: 11px;
+}
 
-  .rtc-composer {
-    padding: 16px;
-  }
+.rtc-muted-row {
+  display: flex;
+  align-items: center;
 
-  .rtc-header-subtitle {
-    display: block;
+  gap: 8px;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 11px;
+}
+
+.rtc-spinner {
+  width: 13px;
+  height: 13px;
+
+  border: 2px solid var(--rtc-border);
+  border-top-color: var(--rtc-accent);
+
+  border-radius: 50%;
+
+  animation: rtc-spin 700ms linear infinite;
+}
+
+button,
+input {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* =========================================================
+   ANIMATIONS
+   ========================================================= */
+
+@keyframes rtc-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@media (min-width: 1024px) {
-  .rtc-sidebar {
-    width: 330px;
+@keyframes rtc-message-in {
+  from {
+    opacity: 0;
+    transform: translateY(5px);
   }
 
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 1000px) and (min-width: 768px) {
   .rtc-main {
-    padding: 20px;
+    padding: 16px;
+  }
+
+  .rtc-chat-frame {
+    grid-template-columns: 320px minmax(0, 1fr);
+  }
+
+  .rtc-message {
+    max-width: 78%;
   }
 }
 
@@ -1262,7 +867,6 @@ body {
   #root {
     width: 100%;
     height: 100%;
-
     min-height: 100%;
 
     margin: 0;
@@ -1270,97 +874,102 @@ body {
     overflow: hidden;
   }
 
-  body {
-    overscroll-behavior: none;
-  }
-
   .rtc-chat-shell {
-    position: relative;
-
     width: 100%;
     height: 100dvh;
-
     min-height: 100dvh;
 
     overflow: hidden;
-
-    background: var(--rtc-bg);
   }
 
-  /* =======================================================
-     TOP HEADER
-     ======================================================= */
+  /* -------------------------------------------------------
+     HEADER
+     ------------------------------------------------------- */
 
   .rtc-header {
-    position: relative;
-
-    z-index: 100;
-
-    width: 100%;
     height: 60px;
 
     padding:
       0
-      calc(12px + env(safe-area-inset-right))
+      calc(10px + env(safe-area-inset-right))
       0
       calc(12px + env(safe-area-inset-left));
-
-    background: var(--rtc-overlay);
-
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
   }
 
   .rtc-brand-mark {
     width: 36px;
     height: 36px;
 
-    border-radius: 11px;
+    border-radius: 10px;
 
-    font-size: 11px;
+    font-size: 10px;
   }
 
   .rtc-header-title {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .rtc-header-subtitle {
     display: none;
   }
 
+  .rtc-header > div:last-child {
+    gap: 6px;
+  }
+
   .rtc-header-button {
-    width: 40px;
-    height: 40px;
+    min-width: 38px;
+    width: auto;
+    height: 38px;
 
+    padding: 0 9px;
+
+    border-radius: 10px;
+
+    font-size: 10px;
+  }
+
+  /*
+   * Theme icon button stays compact.
+   */
+  .rtc-header-button:first-child {
+    width: 38px;
     padding: 0;
-
-    border-radius: 12px;
   }
 
-  .rtc-header-button span:not(.rtc-count-badge) {
-    font-size: 18px;
+  .rtc-header-button:first-child .hidden {
+    display: none;
   }
 
-  /* =======================================================
+  /*
+   * Friends button remains readable without
+   * consuming the whole mobile header.
+   */
+  .rtc-header-button:last-child {
+    min-width: 68px;
+
+    gap: 5px;
+  }
+
+  .rtc-count-badge {
+    min-width: 18px;
+    height: 18px;
+
+    font-size: 9px;
+  }
+
+  /* -------------------------------------------------------
      MAIN
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-main {
-    position: relative;
-
     width: 100%;
     height: calc(100dvh - 60px);
-
-    min-height: 0;
 
     padding: 0;
 
     overflow: hidden;
   }
-
-  /* =======================================================
-     MOBILE FRAME
-     ======================================================= */
 
   .rtc-chat-frame {
     position: relative;
@@ -1371,49 +980,34 @@ body {
     height: 100%;
 
     min-width: 100%;
-    min-height: 100%;
-
     max-width: none;
 
     margin: 0;
-    padding: 0;
-
-    overflow: hidden;
 
     border: 0;
     border-radius: 0;
 
-    background: var(--rtc-bg);
-
     box-shadow: none;
 
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
+    overflow: hidden;
   }
 
-  /* =======================================================
-     CONVERSATION SCREEN
-     ======================================================= */
+  /* -------------------------------------------------------
+     SIDEBAR
+     ------------------------------------------------------- */
 
   .rtc-sidebar {
     position: absolute;
 
-    z-index: 20;
-
     inset: 0;
 
-    display: flex;
+    z-index: 20;
 
     width: 100%;
     height: 100%;
 
     min-width: 100%;
     max-width: 100%;
-
-    margin: 0;
-    padding: 0;
-
-    flex-direction: column;
 
     border: 0;
 
@@ -1425,7 +1019,7 @@ body {
 
     transition:
       transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 220ms ease;
+      opacity 180ms ease;
 
     will-change: transform;
   }
@@ -1439,72 +1033,51 @@ body {
   }
 
   .rtc-sidebar-header {
-    width: 100%;
-    height: 58px;
+    min-height: 56px;
 
-    padding: 0 16px;
-
-    border-bottom: 1px solid var(--rtc-border);
+    padding: 0 15px;
   }
 
   .rtc-section-title {
-    font-size: 15px;
+    font-size: 14px;
   }
 
   .rtc-section-subtitle {
     display: none;
   }
 
-  /* =======================================================
+  /* -------------------------------------------------------
      SEARCH
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-conversation-search {
-    padding: 10px 12px;
-
-    border-bottom: 1px solid var(--rtc-border);
+    padding: 9px 12px;
   }
 
   .rtc-search-input {
     height: 44px;
 
-    border-radius: 14px;
+    /*
+     * More room between icon and text.
+     */
+    padding-left: 48px;
+    padding-right: 14px;
+
+    border-radius: 13px;
 
     font-size: 14px;
   }
 
   .rtc-search-icon {
-    left: 24px;
+    left: 28px;
 
     width: 17px;
     height: 17px;
   }
 
-  .rtc-search-results {
-    right: 10px;
-    left: 10px;
-
-    max-height: 60dvh;
-
-    border-radius: 16px;
-  }
-
-  .rtc-search-user {
-    min-height: 64px;
-
-    padding: 10px 12px;
-  }
-
-  .rtc-avatar-search {
-    width: 40px;
-    height: 40px;
-
-    font-size: 11px;
-  }
-
-  /* =======================================================
+  /* -------------------------------------------------------
      CONVERSATIONS
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-conversation-scroll {
     min-height: 0;
@@ -1524,116 +1097,91 @@ body {
 
   .rtc-conversation-item {
     width: 100%;
-
     min-width: 0;
-    min-height: 72px;
 
-    gap: 12px;
+    min-height: 70px;
 
-    padding: 10px 14px;
+    gap: 11px;
+
+    padding: 9px 14px;
   }
 
   .rtc-conversation-item .rtc-avatar {
-    width: 50px;
-    height: 50px;
+    width: 46px;
+    height: 46px;
 
-    font-size: 12px;
-  }
+    border-radius: 13px;
 
-  .rtc-status-dot {
-    width: 11px;
-    height: 11px;
-
-    border-width: 2px;
+    font-size: 11px;
   }
 
   .rtc-conversation-name {
-    font-size: 14px;
-    font-weight: 650;
-  }
-
-  .rtc-conversation-status,
-  .rtc-separator {
-    display: none;
+    font-size: 13px;
   }
 
   .rtc-last-message {
     margin-top: 3px;
 
-    font-size: 12px;
+    font-size: 11px;
   }
 
-  .rtc-count-badge {
-    min-width: 21px;
-    height: 21px;
+  .rtc-status-dot {
+    width: 10px;
+    height: 10px;
+  }
+
+  /* -------------------------------------------------------
+     QUICK CHAT
+     ------------------------------------------------------- */
+
+  .rtc-quick-chat {
+    padding:
+      11px
+      12px
+      calc(11px + env(safe-area-inset-bottom));
+  }
+
+  .rtc-quick-user {
+    min-height: 52px;
+
+    padding: 7px 9px;
+
+    border-radius: 13px;
+  }
+
+  .rtc-quick-user .rtc-avatar-small {
+    width: 36px;
+    height: 36px;
+  }
+
+  .rtc-small-button {
+    min-width: 54px;
+    min-height: 36px;
+
+    padding: 0 9px;
+
+    border-radius: 9px;
 
     font-size: 10px;
   }
 
-  /* =======================================================
-     QUICK CHAT
-     ======================================================= */
-
-  .rtc-quick-chat {
-    width: 100%;
-
-    padding:
-      12px
-      14px
-      calc(12px + env(safe-area-inset-bottom));
-
-    border-top: 1px solid var(--rtc-border);
-  }
-
-  .rtc-quick-user {
-    min-height: 54px;
-
-    padding: 8px 10px;
-
-    border-radius: 14px;
-  }
-
-  .rtc-quick-user .rtc-avatar-small {
-    width: 38px;
-    height: 38px;
-  }
-
-  .rtc-small-button {
-    min-width: 58px;
-    min-height: 38px;
-
-    padding: 7px 12px;
-
-    border-radius: 10px;
-
-    font-size: 11px;
-  }
-
-  /* =======================================================
+  /* -------------------------------------------------------
      CHAT PANEL
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-chat-panel {
     position: absolute;
 
-    z-index: 30;
-
     inset: 0;
 
-    display: flex;
+    z-index: 30;
 
     width: 100%;
     height: 100%;
 
     min-width: 100%;
-    min-height: 100%;
-
     max-width: 100%;
-
-    margin: 0;
-    padding: 0;
-
-    flex-direction: column;
+    min-height: 100%;
 
     background: var(--rtc-bg);
 
@@ -1644,8 +1192,8 @@ body {
     pointer-events: none;
 
     transition:
-      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
-      opacity 220ms ease;
+      transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 180ms ease;
 
     will-change: transform;
   }
@@ -1658,32 +1206,32 @@ body {
     pointer-events: auto;
   }
 
-  /* =======================================================
+  .rtc-chat-panel.is-mobile-hidden {
+    transform: translate3d(100%, 0, 0);
+
+    opacity: 0;
+
+    pointer-events: none;
+  }
+
+  /* -------------------------------------------------------
      CHAT HEADER
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-chat-header {
-    width: 100%;
-    height: 60px;
-
-    flex-shrink: 0;
+    min-height: 60px;
 
     padding:
       0
-      calc(12px + env(safe-area-inset-right))
+      12px
       0
-      calc(6px + env(safe-area-inset-left));
-
-    border-bottom: 1px solid var(--rtc-border);
-
-    background: var(--rtc-overlay);
-
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
+      5px;
   }
 
   .rtc-mobile-back {
     display: flex;
+    align-items: center;
+    justify-content: center;
 
     width: 42px;
     height: 42px;
@@ -1692,35 +1240,26 @@ body {
 
     margin-right: 2px;
 
-    align-items: center;
-    justify-content: center;
+    padding: 0;
 
     border: 0;
     border-radius: 999px;
 
     background: transparent;
+
     color: var(--rtc-text);
 
-    font-family: Arial, sans-serif;
-    font-size: 34px;
+    font-size: 31px;
     font-weight: 300;
     line-height: 1;
 
     cursor: pointer;
-
-    transition:
-      background 160ms ease,
-      transform 160ms ease;
-  }
-
-  .rtc-mobile-back:hover {
-    background: var(--rtc-surface);
   }
 
   .rtc-mobile-back:active {
-    transform: scale(0.88);
+    background: var(--rtc-surface);
 
-    background: var(--rtc-surface-hover);
+    transform: scale(0.9);
   }
 
   .rtc-chat-header .rtc-avatar {
@@ -1729,35 +1268,24 @@ body {
   }
 
   .rtc-chat-user {
-    font-size: 14px;
+    font-size: 13px;
   }
 
   .rtc-presence {
-    font-size: 10px;
+    font-size: 9px;
   }
 
-  /* =======================================================
+  /* -------------------------------------------------------
      MESSAGES
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-messages {
     width: 100%;
-
-    min-width: 0;
-    min-height: 0;
-
-    flex: 1;
-
-    overflow-y: auto;
 
     padding:
       12px
       10px
       12px;
-
-    background: var(--rtc-bg);
-
-    -webkit-overflow-scrolling: touch;
 
     scrollbar-width: none;
   }
@@ -1774,148 +1302,51 @@ body {
   .rtc-message {
     max-width: 84%;
 
-    padding: 9px 13px;
+    padding: 9px 12px;
 
-    border-radius: 18px;
-
-    box-shadow:
-      0 4px 18px var(--rtc-shadow);
-  }
-
-  .rtc-message.is-mine {
-    border-bottom-right-radius: 5px;
-  }
-
-  .rtc-message.is-theirs {
-    border-bottom-left-radius: 5px;
+    border-radius: 17px;
   }
 
   .rtc-message p {
-    font-size: 14px;
-
+    font-size: 13px;
     line-height: 1.45;
   }
 
   .rtc-message-status {
-    margin-top: 3px;
-
-    font-size: 9px;
+    font-size: 8px;
   }
 
-  /* =======================================================
+  /* -------------------------------------------------------
      TYPING
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-typing-bar {
     width: 100%;
 
-    flex-shrink: 0;
-
-    padding: 6px 12px;
-
-    border-top: 1px solid var(--rtc-border);
-
-    background: var(--rtc-overlay);
-
-    backdrop-filter: blur(20px);
-    -webkit-backdrop-filter: blur(20px);
+    padding: 5px 11px;
   }
 
-  /* =======================================================
+  /* -------------------------------------------------------
      COMPOSER
-     ======================================================= */
+     ------------------------------------------------------- */
 
   .rtc-composer {
     width: 100%;
-
-    flex-shrink: 0;
 
     padding:
       7px
       8px
       calc(7px + env(safe-area-inset-bottom));
-
-    border-top: 1px solid var(--rtc-border);
-
-    background: var(--rtc-overlay);
-
-    backdrop-filter: blur(28px);
-    -webkit-backdrop-filter: blur(28px);
   }
 
   .rtc-composer > div {
     width: 100%;
-
     max-width: none;
   }
 
-  .rtc-message-input {
-    width: 100%;
-
-    min-height: 52px;
-
-    padding: 4px;
-
-    border-radius: 20px;
-  }
-
-  .rtc-message-input input {
-    width: 100%;
-
-    height: 44px;
-
-    padding: 0 10px;
-
-    font-size: 15px;
-  }
-
-  .rtc-message-input button {
-    width: 44px;
-    height: 44px;
-
-    border-radius: 15px;
-  }
-
-  /* =======================================================
-     EMPTY
-     ======================================================= */
-
-  .rtc-empty-state {
-    width: 100%;
-    height: 100%;
-
-    padding: 24px;
-  }
-
-  .rtc-empty-icon {
-    width: 58px;
-    height: 58px;
-
-    margin-bottom: 16px;
-
-    border-radius: 18px;
-  }
-
-  .rtc-empty-title {
-    font-size: 16px;
-  }
-
-  .rtc-empty-description {
-    max-width: 300px;
-
-    font-size: 13px;
-  }
-
-  .rtc-empty-message-description {
-    max-width: 250px;
-
-    margin-right: auto;
-    margin-left: auto;
-  }
-
-  /* =======================================================
+  /* -------------------------------------------------------
      TOUCH
-     ======================================================= */
+     ------------------------------------------------------- */
 
   button,
   input {
@@ -1925,133 +1356,40 @@ body {
   .rtc-conversation-item,
   .rtc-small-button,
   .rtc-header-button,
-  .rtc-mobile-back,
-  .rtc-message-input button {
+  .rtc-mobile-back {
     touch-action: manipulation;
   }
 }
 
 /* =========================================================
-   SMALL ANDROID PHONES
+   VERY SMALL PHONES
    ========================================================= */
 
 @media (max-width: 380px) {
   .rtc-header {
-    padding-left: 8px;
-    padding-right: 8px;
+    padding-left: 9px;
+    padding-right: 9px;
   }
 
   .rtc-header-title {
-    font-size: 13px;
+    font-size: 12px;
   }
 
-  .rtc-header-button {
-    width: 38px;
-    height: 38px;
+  .rtc-header > div:first-child {
+    gap: 8px;
+  }
+
+  .rtc-header-button:last-child {
+    min-width: 60px;
+    padding: 0 7px;
   }
 
   .rtc-conversation-item {
-    padding-right: 10px;
-    padding-left: 10px;
-  }
-
-  .rtc-conversation-item .rtc-avatar {
-    width: 46px;
-    height: 46px;
+    padding-left: 11px;
+    padding-right: 11px;
   }
 
   .rtc-message {
     max-width: 88%;
-  }
-
-  .rtc-chat-header {
-    padding-left: 4px;
-  }
-}
-
-/* =========================================================
-   LANDSCAPE ANDROID
-   ========================================================= */
-
-@media (max-width: 767px) and (orientation: landscape) {
-  .rtc-header {
-    height: 52px;
-  }
-
-  .rtc-main {
-    height: calc(100dvh - 52px);
-  }
-
-  .rtc-chat-header {
-    height: 52px;
-  }
-
-  .rtc-messages {
-    padding-top: 8px;
-    padding-bottom: 8px;
-  }
-
-  .rtc-composer {
-    padding-top: 5px;
-    padding-bottom: 5px;
-  }
-
-  .rtc-message-input {
-    min-height: 46px;
-  }
-
-  .rtc-message-input input,
-  .rtc-message-input button {
-    height: 38px;
-  }
-}
-
-/* =========================================================
-   REDUCED MOTION
-   ========================================================= */
-
-@media (prefers-reduced-motion: reduce) {
-  .rtc-chat-shell *,
-  .rtc-chat-shell *::before,
-  .rtc-chat-shell *::after {
-    scroll-behavior: auto !important;
-
-    transition-duration: 0.01ms !important;
-
-    animation-duration: 0.01ms !important;
-  }
-}
-
-/* =========================================================
-   MOBILE CHAT NAVIGATION — DESKTOP RESET
-   ========================================================= */
-
-@media (min-width: 768px) {
-  .rtc-mobile-back {
-    display: none !important;
-  }
-
-  .rtc-sidebar {
-    position: relative;
-    inset: auto;
-    transform: none !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    width: auto;
-    min-width: 0;
-    max-width: none;
-  }
-
-  .rtc-chat-panel,
-  .rtc-chat-panel.is-mobile-visible,
-  .rtc-chat-panel.is-mobile-hidden {
-    position: relative;
-    inset: auto;
-    transform: none !important;
-    opacity: 1 !important;
-    pointer-events: auto !important;
-    width: auto;
-    min-width: 0;
-    max-width: none;
   }
 }
