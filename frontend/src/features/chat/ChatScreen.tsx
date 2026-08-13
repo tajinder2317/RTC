@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
+
 import { useAuthStore } from "../auth/authStore";
 import MessageInput from "./MessageInput";
 import ConversationList from "./ConversationList";
@@ -61,6 +62,14 @@ export default function ChatScreen() {
       : "dark";
   });
 
+  /*
+   * =========================================================
+   * MOBILE NAVIGATION
+   * =========================================================
+   */
+
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+
   const onlineUserIds = usePresenceStore(
     (state) => state.onlineUserIds,
   );
@@ -91,15 +100,19 @@ export default function ChatScreen() {
 
   const unreadIncomingSignature =
     unreadIncomingMessageIds.length > 0 &&
-      currentConversationId
+    currentConversationId
       ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
       : null;
 
- const startChatUsers = users.filter(
-  (user) =>
-    user.username === "dhillon2317" &&
-    user.id !== currentUser?.id,
-);
+  /*
+   * Keep your temporary restriction:
+   * only show dhillon2317 in Quick Chat.
+   */
+  const startChatUsers = users.filter(
+    (user) =>
+      user.username === "dhillon2317" &&
+      user.id !== currentUser?.id,
+  );
 
   const selectedUser =
     currentConversation?.members.find(
@@ -110,10 +123,6 @@ export default function ChatScreen() {
     ? onlineUserIds.includes(selectedUser.id)
     : false;
 
-  /*
-   * Only the latest outgoing message gets the
-   * ✓ / ✓✓ status indicator.
-   */
   const latestOutgoingMessageId =
     [...messages]
       .reverse()
@@ -437,6 +446,24 @@ export default function ChatScreen() {
     }[];
   }) => {
     setConversation(conversation);
+
+    /*
+     * This is the important mobile fix.
+     *
+     * ConversationList opens the chat panel instead
+     * of leaving it off-screen.
+     */
+    setMobileChatOpen(true);
+  };
+
+  /*
+   * =========================================================
+   * MOBILE BACK
+   * =========================================================
+   */
+
+  const closeMobileChat = () => {
+    setMobileChatOpen(false);
   };
 
   /*
@@ -470,7 +497,7 @@ export default function ChatScreen() {
       if (!response.ok) {
         throw new Error(
           data.message ||
-          "Failed to create conversation",
+            "Failed to create conversation",
         );
       }
 
@@ -511,12 +538,16 @@ export default function ChatScreen() {
   return (
     <div
       data-theme={theme}
-      className={`rtc-chat-shell ${isDark
+      className={`rtc-chat-shell ${
+        isDark
           ? "rtc-theme-dark"
           : "rtc-theme-light"
-        }`}
+      }`}
     >
-      {/* HEADER */}
+      {/* =====================================================
+          HEADER
+          ===================================================== */}
+
       <header className="rtc-header">
         <div className="flex items-center gap-3">
           <div className="rtc-brand-mark">
@@ -537,10 +568,12 @@ export default function ChatScreen() {
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label={`Switch to ${isDark ? "light" : "dark"
-              } mode`}
-            title={`Switch to ${isDark ? "light" : "dark"
-              } mode`}
+            aria-label={`Switch to ${
+              isDark ? "light" : "dark"
+            } mode`}
+            title={`Switch to ${
+              isDark ? "light" : "dark"
+            } mode`}
             onClick={() =>
               setTheme((current) =>
                 current === "dark"
@@ -575,11 +608,23 @@ export default function ChatScreen() {
         </div>
       </header>
 
-      {/* MAIN */}
+      {/* =====================================================
+          MAIN
+          ===================================================== */}
+
       <main className="rtc-main">
         <div className="rtc-chat-frame">
-          {/* SIDEBAR */}
-          <aside className="rtc-sidebar">
+          {/* =================================================
+              SIDEBAR
+              ================================================= */}
+
+          <aside
+            className={`rtc-sidebar ${
+              mobileChatOpen
+                ? "is-mobile-hidden"
+                : ""
+            }`}
+          >
             <div className="rtc-sidebar-header">
               <div>
                 <h2 className="rtc-section-title">
@@ -604,6 +649,7 @@ export default function ChatScreen() {
             </div>
 
             {/* QUICK CHAT */}
+
             <div className="rtc-quick-chat">
               <div className="mb-3 flex items-center justify-between">
                 <h3 className="rtc-eyebrow">
@@ -645,18 +691,19 @@ export default function ChatScreen() {
                           </div>
 
                           <span
-                            className={`rtc-status-dot ${isOnline
+                            className={`rtc-status-dot ${
+                              isOnline
                                 ? "is-online"
                                 : ""
-                              }`}
+                            }`}
                           />
                         </div>
 
                         <div className="min-w-0 flex-1">
-  <p className="rtc-user-name">
-    {user.username}
-  </p>
-</div>
+                          <p className="rtc-user-name">
+                            {user.username}
+                          </p>
+                        </div>
 
                         <button
                           type="button"
@@ -682,10 +729,19 @@ export default function ChatScreen() {
             </div>
           </aside>
 
-          {/* CHAT PANEL */}
-          <section className="rtc-chat-panel">
+          {/* =================================================
+              CHAT PANEL
+              ================================================= */}
+
+          <section
+            className={`rtc-chat-panel ${
+              mobileChatOpen
+                ? "is-mobile-visible"
+                : "is-mobile-hidden"
+            }`}
+          >
             {!selectedUser ||
-              !currentConversationId ? (
+            !currentConversationId ? (
               <div className="rtc-empty-state">
                 <div>
                   <div className="rtc-empty-icon">
@@ -706,7 +762,21 @@ export default function ChatScreen() {
             ) : (
               <>
                 {/* CHAT HEADER */}
+
                 <div className="rtc-chat-header">
+                  {/* MOBILE BACK BUTTON */}
+
+                  <button
+                    type="button"
+                    className="rtc-mobile-back"
+                    onClick={
+                      closeMobileChat
+                    }
+                    aria-label="Back to conversations"
+                  >
+                    ‹
+                  </button>
+
                   <div className="relative mr-3 shrink-0">
                     <div className="rtc-avatar">
                       {selectedUser.username
@@ -715,10 +785,11 @@ export default function ChatScreen() {
                     </div>
 
                     <span
-                      className={`rtc-status-dot ${isSelectedUserOnline
+                      className={`rtc-status-dot ${
+                        isSelectedUserOnline
                           ? "is-online"
                           : ""
-                        }`}
+                      }`}
                     />
                   </div>
 
@@ -728,10 +799,11 @@ export default function ChatScreen() {
                     </h2>
 
                     <div
-                      className={`rtc-presence ${isSelectedUserOnline
+                      className={`rtc-presence ${
+                        isSelectedUserOnline
                           ? "is-online"
                           : ""
-                        }`}
+                      }`}
                     >
                       <span className="rtc-presence-dot" />
 
@@ -743,18 +815,22 @@ export default function ChatScreen() {
                 </div>
 
                 {/* MESSAGE AREA */}
+
                 <div className="rtc-messages rtc-scrollbar">
                   {messages.length === 0 ? (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center">
-                        <div className="mb-3 text-2xl">👋</div>
+                        <div className="mb-3 text-2xl">
+                          👋
+                        </div>
 
                         <p className="rtc-empty-message-title">
                           No messages yet
                         </p>
 
                         <p className="rtc-empty-message-description">
-                          Say hello and start the conversation.
+                          Say hello and start the
+                          conversation.
                         </p>
                       </div>
                     </div>
@@ -762,41 +838,40 @@ export default function ChatScreen() {
                     <div className="mx-auto flex max-w-4xl flex-col gap-2.5">
                       {messages.map((message) => {
                         const isMine =
-                          message.senderId === currentUser?.id;
-
-                        const latestOutgoingMessageId =
-                          [...messages]
-                            .reverse()
-                            .find(
-                              (item) =>
-                                item.senderId === currentUser?.id,
-                            )?.id ?? null;
+                          message.senderId ===
+                          currentUser?.id;
 
                         const isLatestOutgoingMessage =
                           isMine &&
-                          message.id === latestOutgoingMessageId;
+                          message.id ===
+                            latestOutgoingMessageId;
 
-                        const messageStatus = message.readAt
-                          ? "✓✓"
-                          : message.deliveredAt
+                        const messageStatus =
+                          message.readAt
                             ? "✓✓"
-                            : "✓";
+                            : message.deliveredAt
+                              ? "✓✓"
+                              : "✓";
 
                         return (
                           <div
                             key={message.id}
-                            className={`flex ${isMine
+                            className={`flex ${
+                              isMine
                                 ? "justify-end"
                                 : "justify-start"
-                              }`}
+                            }`}
                           >
                             <div
-                              className={`rtc-message ${isMine
+                              className={`rtc-message ${
+                                isMine
                                   ? "is-mine"
                                   : "is-theirs"
-                                }`}
+                              }`}
                             >
-                              <p>{message.text}</p>
+                              <p>
+                                {message.text}
+                              </p>
 
                               {isLatestOutgoingMessage && (
                                 <div className="rtc-message-status">
@@ -807,7 +882,9 @@ export default function ChatScreen() {
                                         : ""
                                     }
                                   >
-                                    {messageStatus}
+                                    {
+                                      messageStatus
+                                    }
                                   </span>
                                 </div>
                               )}
@@ -822,9 +899,10 @@ export default function ChatScreen() {
                 </div>
 
                 {/* TYPING */}
+
                 {typingUser &&
                   typingUser.userId !==
-                  currentUser?.id && (
+                    currentUser?.id && (
                     <div className="rtc-typing-bar">
                       <TypingIndicator
                         username={
@@ -835,6 +913,7 @@ export default function ChatScreen() {
                   )}
 
                 {/* COMPOSER */}
+
                 <div className="rtc-composer">
                   <div className="mx-auto max-w-4xl">
                     <MessageInput
