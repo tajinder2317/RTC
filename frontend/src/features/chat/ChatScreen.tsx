@@ -35,21 +35,15 @@ export default function ChatScreen() {
 
   const messages = useChatStore((state) => state.messages);
 
-  const setConversation = useChatStore(
-    (state) => state.setConversation,
-  );
+  const setConversation = useChatStore((state) => state.setConversation);
 
-  const setMessages = useChatStore(
-    (state) => state.setMessages,
-  );
+  const setMessages = useChatStore((state) => state.setMessages);
 
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
-  const [creatingConversation, setCreatingConversation] =
-    useState(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
-  const [friendRequestCount, setFriendRequestCount] =
-    useState(0);
+  const [friendRequestCount, setFriendRequestCount] = useState(0);
 
   const [typingUser, setTypingUser] = useState<{
     userId: string;
@@ -57,9 +51,7 @@ export default function ChatScreen() {
   } | null>(null);
 
   const [theme, setTheme] = useState<Theme>(() => {
-    return localStorage.getItem("rtc-theme") === "light"
-      ? "light"
-      : "dark";
+    return localStorage.getItem("rtc-theme") === "light" ? "light" : "dark";
   });
 
   /*
@@ -70,18 +62,15 @@ export default function ChatScreen() {
 
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
 
-  const onlineUserIds = usePresenceStore(
-    (state) => state.onlineUserIds,
-  );
+  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const readReceiptTimerRef = useRef<
-    ReturnType<typeof setTimeout> | null
-  >(null);
+  const readReceiptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
 
-  const lastReadReceiptSignatureRef =
-    useRef<string | null>(null);
+  const lastReadReceiptSignatureRef = useRef<string | null>(null);
 
   /*
    * =========================================================
@@ -99,8 +88,7 @@ export default function ChatScreen() {
     .map((message) => message.id);
 
   const unreadIncomingSignature =
-    unreadIncomingMessageIds.length > 0 &&
-    currentConversationId
+    unreadIncomingMessageIds.length > 0 && currentConversationId
       ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
       : null;
 
@@ -109,9 +97,7 @@ export default function ChatScreen() {
    * only show dhillon2317 in Quick Chat.
    */
   const startChatUsers = users.filter(
-    (user) =>
-      user.username === "dhillon2317" &&
-      user.id !== currentUser?.id,
+    (user) => user.username === "dhillon2317" && user.id !== currentUser?.id,
   );
 
   const selectedUser =
@@ -126,10 +112,7 @@ export default function ChatScreen() {
   const latestOutgoingMessageId =
     [...messages]
       .reverse()
-      .find(
-        (message) =>
-          message.senderId === currentUser?.id,
-      )?.id ?? null;
+      .find((message) => message.senderId === currentUser?.id)?.id ?? null;
 
   const isDark = theme === "dark";
 
@@ -156,21 +139,16 @@ export default function ChatScreen() {
       try {
         setLoadingUsers(true);
 
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/users`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
+        const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
           },
-        );
+        });
 
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch users",
-          );
+          throw new Error(data.message || "Failed to fetch users");
         }
 
         setUsers(data.users);
@@ -206,10 +184,7 @@ export default function ChatScreen() {
           setFriendRequestCount(requests.length);
         }
       } catch (error) {
-        console.error(
-          "Load friend requests count error:",
-          error,
-        );
+        console.error("Load friend requests count error:", error);
       }
     };
 
@@ -255,29 +230,24 @@ export default function ChatScreen() {
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to load messages",
-          );
+          throw new Error(data.message || "Failed to load messages");
         }
 
         if (cancelled) return;
 
-        const existingMessages =
-          useChatStore.getState().messages;
+        const existingMessages = useChatStore.getState().messages;
 
         const mergedMessages = [
           ...data.messages,
           ...existingMessages.filter(
             (existingMessage) =>
               !data.messages.some(
-                (message: { id: string }) =>
-                  message.id === existingMessage.id,
+                (message: { id: string }) => message.id === existingMessage.id,
               ),
           ),
         ].sort(
           (a, b) =>
-            new Date(a.createdAt).getTime() -
-            new Date(b.createdAt).getTime(),
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
         );
 
         setMessages(mergedMessages);
@@ -305,11 +275,7 @@ export default function ChatScreen() {
       readReceiptTimerRef.current = null;
     }
 
-    if (
-      !token ||
-      !currentConversationId ||
-      !currentUser
-    ) {
+    if (!token || !currentConversationId || !currentUser) {
       lastReadReceiptSignatureRef.current = null;
       return;
     }
@@ -319,15 +285,11 @@ export default function ChatScreen() {
       return;
     }
 
-    if (
-      lastReadReceiptSignatureRef.current ===
-      unreadIncomingSignature
-    ) {
+    if (lastReadReceiptSignatureRef.current === unreadIncomingSignature) {
       return;
     }
 
-    lastReadReceiptSignatureRef.current =
-      unreadIncomingSignature;
+    lastReadReceiptSignatureRef.current = unreadIncomingSignature;
 
     readReceiptTimerRef.current = setTimeout(() => {
       socket.emit("conversation:read", {
@@ -341,12 +303,7 @@ export default function ChatScreen() {
         readReceiptTimerRef.current = null;
       }
     };
-  }, [
-    currentConversationId,
-    currentUser?.id,
-    token,
-    unreadIncomingSignature,
-  ]);
+  }, [currentConversationId, currentUser?.id, token, unreadIncomingSignature]);
 
   /*
    * =========================================================
@@ -393,17 +350,11 @@ export default function ChatScreen() {
     };
 
     socket.on("userTyping", handleUserTyping);
-    socket.on(
-      "userStoppedTyping",
-      handleUserStoppedTyping,
-    );
+    socket.on("userStoppedTyping", handleUserStoppedTyping);
 
     return () => {
       socket.off("userTyping", handleUserTyping);
-      socket.off(
-        "userStoppedTyping",
-        handleUserStoppedTyping,
-      );
+      socket.off("userStoppedTyping", handleUserStoppedTyping);
 
       setTypingUser(null);
     };
@@ -495,18 +446,12 @@ export default function ChatScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(
-          data.message ||
-            "Failed to create conversation",
-        );
+        throw new Error(data.message || "Failed to create conversation");
       }
 
       await openConversation(data.conversation);
     } catch (error) {
-      console.error(
-        "Start conversation error:",
-        error,
-      );
+      console.error("Start conversation error:", error);
     } finally {
       setCreatingConversation(false);
     }
@@ -539,9 +484,7 @@ export default function ChatScreen() {
     <div
       data-theme={theme}
       className={`rtc-chat-shell ${
-        isDark
-          ? "rtc-theme-dark"
-          : "rtc-theme-light"
+        isDark ? "rtc-theme-dark" : "rtc-theme-light"
       }`}
     >
       {/* =====================================================
@@ -549,45 +492,29 @@ export default function ChatScreen() {
           ===================================================== */}
 
       <header className="rtc-header">
-        <div className="flex items-center gap-3">
-          <div className="rtc-brand-mark">
-            RT
-          </div>
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="rtc-brand-mark">RT</div>
 
           <div>
-            <h1 className="rtc-header-title">
-              Real-Time Chat
-            </h1>
+            <h1 className="rtc-header-title">Real-Time Chat</h1>
 
-            <p className="rtc-header-subtitle">
-              Connected conversations
-            </p>
+            <p className="rtc-header-subtitle">Connected conversations</p>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="rtc-header-actions">
           <button
             type="button"
-            aria-label={`Switch to ${
-              isDark ? "light" : "dark"
-            } mode`}
-            title={`Switch to ${
-              isDark ? "light" : "dark"
-            } mode`}
+            aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+            title={`Switch to ${isDark ? "light" : "dark"} mode`}
             onClick={() =>
-              setTheme((current) =>
-                current === "dark"
-                  ? "light"
-                  : "dark",
-              )
+              setTheme((current) => (current === "dark" ? "light" : "dark"))
             }
-            className="rtc-header-button"
+            className="rtc-header-button rtc-theme-button"
           >
-            <span className="text-base leading-none">
-              {isDark ? "☀" : "☾"}
-            </span>
+            <span className="text-base leading-none">{isDark ? "☀" : "☾"}</span>
 
-            <span className="hidden sm:inline">
+            <span className="rtc-theme-button-text">
               {isDark ? "Light" : "Dark"}
             </span>
           </button>
@@ -595,13 +522,13 @@ export default function ChatScreen() {
           <button
             type="button"
             onClick={() => navigate("/friends")}
-            className="rtc-header-button"
+            className="rtc-header-button rtc-friends-button"
           >
-            <span>Friends</span>
+            <span className="rtc-friends-button-text">Friends</span>
 
             {friendRequestCount > 0 && (
               <span className="rtc-count-badge">
-                {friendRequestCount}
+                {friendRequestCount > 99 ? "99+" : friendRequestCount}
               </span>
             )}
           </button>
@@ -620,31 +547,21 @@ export default function ChatScreen() {
 
           <aside
             className={`rtc-sidebar ${
-              mobileChatOpen
-                ? "is-mobile-hidden"
-                : ""
+              mobileChatOpen ? "is-mobile-hidden" : ""
             }`}
           >
             <div className="rtc-sidebar-header">
               <div>
-                <h2 className="rtc-section-title">
-                  Conversations
-                </h2>
+                <h2 className="rtc-section-title">Conversations</h2>
 
-                <p className="rtc-section-subtitle">
-                  Your recent chats
-                </p>
+                <p className="rtc-section-subtitle">Your recent chats</p>
               </div>
             </div>
 
             <div className="min-h-0 flex-1 overflow-hidden">
               <ConversationList
-                onSelectConversation={
-                  openConversation
-                }
-                currentConversationId={
-                  currentConversationId
-                }
+                onSelectConversation={openConversation}
+                currentConversationId={currentConversationId}
               />
             </div>
 
@@ -652,13 +569,9 @@ export default function ChatScreen() {
 
             <div className="rtc-quick-chat">
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="rtc-eyebrow">
-                  Start a chat
-                </h3>
+                <h3 className="rtc-eyebrow">Start a chat</h3>
 
-                <span className="rtc-quick-label">
-                  Quick
-                </span>
+                <span className="rtc-quick-label">Quick</span>
               </div>
 
               {loadingUsers ? (
@@ -667,59 +580,37 @@ export default function ChatScreen() {
                   Loading users...
                 </div>
               ) : startChatUsers.length === 0 ? (
-                <p className="rtc-muted-text">
-                  No other users found.
-                </p>
+                <p className="rtc-muted-text">No other users found.</p>
               ) : (
                 <div className="space-y-2">
                   {startChatUsers.map((user) => {
-                    const isOnline =
-                      onlineUserIds.includes(
-                        user.id,
-                      );
+                    const isOnline = onlineUserIds.includes(user.id);
 
                     return (
-                      <div
-                        key={user.id}
-                        className="rtc-quick-user"
-                      >
+                      <div key={user.id} className="rtc-quick-user">
                         <div className="relative shrink-0">
                           <div className="rtc-avatar rtc-avatar-small">
-                            {user.username
-                              .slice(0, 2)
-                              .toUpperCase()}
+                            {user.username.slice(0, 2).toUpperCase()}
                           </div>
 
                           <span
                             className={`rtc-status-dot ${
-                              isOnline
-                                ? "is-online"
-                                : ""
+                              isOnline ? "is-online" : ""
                             }`}
                           />
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="rtc-user-name">
-                            {user.username}
-                          </p>
+                          <p className="rtc-user-name">{user.username}</p>
                         </div>
 
                         <button
                           type="button"
-                          onClick={() =>
-                            startConversation(
-                              user,
-                            )
-                          }
-                          disabled={
-                            creatingConversation
-                          }
+                          onClick={() => startConversation(user)}
+                          disabled={creatingConversation}
                           className="rtc-small-button"
                         >
-                          {creatingConversation
-                            ? "..."
-                            : "Chat"}
+                          {creatingConversation ? "..." : "Chat"}
                         </button>
                       </div>
                     );
@@ -735,27 +626,19 @@ export default function ChatScreen() {
 
           <section
             className={`rtc-chat-panel ${
-              mobileChatOpen
-                ? "is-mobile-visible"
-                : "is-mobile-hidden"
+              mobileChatOpen ? "is-mobile-visible" : "is-mobile-hidden"
             }`}
           >
-            {!selectedUser ||
-            !currentConversationId ? (
+            {!selectedUser || !currentConversationId ? (
               <div className="rtc-empty-state">
                 <div>
-                  <div className="rtc-empty-icon">
-                    💬
-                  </div>
+                  <div className="rtc-empty-icon">💬</div>
 
-                  <h2 className="rtc-empty-title">
-                    Select a conversation
-                  </h2>
+                  <h2 className="rtc-empty-title">Select a conversation</h2>
 
                   <p className="rtc-empty-description">
-                    Choose a conversation from
-                    the sidebar to start messaging
-                    in real time.
+                    Choose a conversation from the sidebar to start messaging in
+                    real time.
                   </p>
                 </div>
               </div>
@@ -769,9 +652,7 @@ export default function ChatScreen() {
                   <button
                     type="button"
                     className="rtc-mobile-back"
-                    onClick={
-                      closeMobileChat
-                    }
+                    onClick={closeMobileChat}
                     aria-label="Back to conversations"
                   >
                     ‹
@@ -779,37 +660,27 @@ export default function ChatScreen() {
 
                   <div className="relative mr-3 shrink-0">
                     <div className="rtc-avatar">
-                      {selectedUser.username
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      {selectedUser.username.slice(0, 2).toUpperCase()}
                     </div>
 
                     <span
                       className={`rtc-status-dot ${
-                        isSelectedUserOnline
-                          ? "is-online"
-                          : ""
+                        isSelectedUserOnline ? "is-online" : ""
                       }`}
                     />
                   </div>
 
                   <div className="min-w-0">
-                    <h2 className="rtc-chat-user">
-                      {selectedUser.username}
-                    </h2>
+                    <h2 className="rtc-chat-user">{selectedUser.username}</h2>
 
                     <div
                       className={`rtc-presence ${
-                        isSelectedUserOnline
-                          ? "is-online"
-                          : ""
+                        isSelectedUserOnline ? "is-online" : ""
                       }`}
                     >
                       <span className="rtc-presence-dot" />
 
-                      {isSelectedUserOnline
-                        ? "Online"
-                        : "Offline"}
+                      {isSelectedUserOnline ? "Online" : "Offline"}
                     </div>
                   </div>
                 </div>
@@ -820,71 +691,51 @@ export default function ChatScreen() {
                   {messages.length === 0 ? (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center">
-                        <div className="mb-3 text-2xl">
-                          👋
-                        </div>
+                        <div className="mb-3 text-2xl">👋</div>
 
                         <p className="rtc-empty-message-title">
                           No messages yet
                         </p>
 
                         <p className="rtc-empty-message-description">
-                          Say hello and start the
-                          conversation.
+                          Say hello and start the conversation.
                         </p>
                       </div>
                     </div>
                   ) : (
                     <div className="mx-auto flex max-w-4xl flex-col gap-2.5">
                       {messages.map((message) => {
-                        const isMine =
-                          message.senderId ===
-                          currentUser?.id;
+                        const isMine = message.senderId === currentUser?.id;
 
                         const isLatestOutgoingMessage =
-                          isMine &&
-                          message.id ===
-                            latestOutgoingMessageId;
+                          isMine && message.id === latestOutgoingMessageId;
 
-                        const messageStatus =
-                          message.readAt
+                        const messageStatus = message.readAt
+                          ? "✓✓"
+                          : message.deliveredAt
                             ? "✓✓"
-                            : message.deliveredAt
-                              ? "✓✓"
-                              : "✓";
+                            : "✓";
 
                         return (
                           <div
                             key={message.id}
                             className={`flex ${
-                              isMine
-                                ? "justify-end"
-                                : "justify-start"
+                              isMine ? "justify-end" : "justify-start"
                             }`}
                           >
                             <div
                               className={`rtc-message ${
-                                isMine
-                                  ? "is-mine"
-                                  : "is-theirs"
+                                isMine ? "is-mine" : "is-theirs"
                               }`}
                             >
-                              <p>
-                                {message.text}
-                              </p>
+                              <p>{message.text}</p>
 
                               {isLatestOutgoingMessage && (
                                 <div className="rtc-message-status">
                                   <span
-                                    className={
-                                      message.readAt
-                                        ? "is-read"
-                                        : ""
-                                    }
+                                    className={message.readAt ? "is-read" : ""}
                                   >
-                                    {
-                                      messageStatus
-                                    }
+                                    {messageStatus}
                                   </span>
                                 </div>
                               )}
@@ -900,26 +751,17 @@ export default function ChatScreen() {
 
                 {/* TYPING */}
 
-                {typingUser &&
-                  typingUser.userId !==
-                    currentUser?.id && (
-                    <div className="rtc-typing-bar">
-                      <TypingIndicator
-                        username={
-                          typingUser.username
-                        }
-                      />
-                    </div>
-                  )}
+                {typingUser && typingUser.userId !== currentUser?.id && (
+                  <div className="rtc-typing-bar">
+                    <TypingIndicator username={typingUser.username} />
+                  </div>
+                )}
 
                 {/* COMPOSER */}
 
                 <div className="rtc-composer">
                   <div className="mx-auto max-w-4xl">
-                    <MessageInput
-                      onSend={sendMessage}
-                      theme={theme}
-                    />
+                    <MessageInput onSend={sendMessage} theme={theme} />
                   </div>
                 </div>
               </>

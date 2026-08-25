@@ -1,0 +1,4672 @@
+
+
+===== FILE: package.json =====
+
+{
+  "name": "rtcb",
+  "version": "1.0.0",
+  "description": "Real Time Chat Backend",
+  "license": "ISC",
+  "author": "tajinder2317",
+  "type": "commonjs",
+  "main": "main.tsx",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "start": "vite preview"
+  },
+  "dependencies": {
+    "@hookform/resolvers": "^5.7.1",
+    "@tailwindcss/vite": "^4.3.3",
+    "axios": "^1.19.0",
+    "express": "^4.22.2",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "react-hook-form": "^7.85.0",
+    "react-router-dom": "^7.18.2",
+    "socket.io": "^4.8.3",
+    "socket.io-client": "^4.8.3",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.2.1",
+    "zod": "^4.4.3",
+    "zustand": "^5.0.14"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
+    "@vitejs/plugin-react": "^6.0.5",
+    "typescript": "^7.0.2"
+  }
+}
+
+
+===== FILE: tsconfig.json =====
+
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "useDefineForClassFields": true,
+    "lib": ["ES2020", "DOM", "DOM.Iterable"],
+    "allowJs": false,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "forceConsistentCasingInFileNames": true
+  },
+  "include": ["src"]
+}
+
+
+===== FILE: vite.config.ts =====
+
+
+import { defineConfig } from "vite";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+
+export default defineConfig({
+  plugins: [react(), tailwindcss()],
+});
+
+===== FILE: src/main.tsx =====
+
+import { StrictMode } from "react";
+import { createRoot } from "react-dom/client";
+import App from "./app/App";
+import "./styles.css";
+
+createRoot(document.getElementById("root")!).render(
+  <StrictMode>
+    <App />
+  </StrictMode>,
+);
+
+
+===== FILE: src/styles.css =====
+
+@import "tailwindcss";
+
+/* =========================================================
+   RTC CHAT
+   Production-style responsive chat UI
+   Desktop + Android / Mobile
+   ========================================================= */
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+}
+
+body {
+  min-height: 100vh;
+  background: #050505;
+}
+
+/* =========================================================
+   THEME
+   ========================================================= */
+
+.rtc-chat-shell {
+  --rtc-bg: #050505;
+  --rtc-panel: rgba(255, 255, 255, 0.035);
+  --rtc-panel-strong: rgba(255, 255, 255, 0.06);
+  --rtc-surface: rgba(255, 255, 255, 0.055);
+  --rtc-surface-hover: rgba(255, 255, 255, 0.075);
+
+  --rtc-border: rgba(255, 255, 255, 0.09);
+  --rtc-border-strong: rgba(255, 255, 255, 0.14);
+
+  --rtc-text: #ffffff;
+  --rtc-text-soft: rgba(255, 255, 255, 0.72);
+  --rtc-text-muted: rgba(255, 255, 255, 0.42);
+  --rtc-text-faint: rgba(255, 255, 255, 0.28);
+
+  --rtc-input: rgba(255, 255, 255, 0.055);
+  --rtc-input-focus: rgba(255, 255, 255, 0.075);
+
+  --rtc-selected: rgba(255, 255, 255, 0.07);
+  --rtc-overlay: rgba(5, 5, 5, 0.72);
+
+  --rtc-shadow: rgba(0, 0, 0, 0.35);
+  --rtc-inset: rgba(255, 255, 255, 0.035);
+
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+
+  overflow: hidden;
+
+  background: var(--rtc-bg);
+  color: var(--rtc-text);
+}
+
+.rtc-chat-shell[data-theme="light"] {
+  --rtc-bg: #f5f5f7;
+  --rtc-panel: rgba(255, 255, 255, 0.62);
+  --rtc-panel-strong: rgba(255, 255, 255, 0.78);
+  --rtc-surface: rgba(255, 255, 255, 0.68);
+  --rtc-surface-hover: rgba(255, 255, 255, 0.88);
+
+  --rtc-border: rgba(15, 23, 42, 0.09);
+  --rtc-border-strong: rgba(15, 23, 42, 0.14);
+
+  --rtc-text: #111827;
+  --rtc-text-soft: rgba(17, 24, 39, 0.72);
+  --rtc-text-muted: rgba(17, 24, 39, 0.46);
+  --rtc-text-faint: rgba(17, 24, 39, 0.3);
+
+  --rtc-input: rgba(255, 255, 255, 0.72);
+  --rtc-input-focus: rgba(255, 255, 255, 0.92);
+
+  --rtc-selected: rgba(15, 23, 42, 0.055);
+  --rtc-overlay: rgba(255, 255, 255, 0.72);
+
+  --rtc-shadow: rgba(15, 23, 42, 0.1);
+  --rtc-inset: rgba(255, 255, 255, 0.8);
+}
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
+.rtc-header {
+  display: flex;
+
+  width: 100%;
+  height: 68px;
+
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: space-between;
+
+  padding: 0 1rem;
+
+  border-bottom: 1px solid var(--rtc-border);
+
+  background: var(--rtc-overlay);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.rtc-brand-mark {
+  display: flex;
+
+  width: 40px;
+  height: 40px;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--rtc-border-strong);
+  border-radius: 13px;
+
+  background: var(--rtc-surface);
+  color: var(--rtc-text);
+
+  font-size: 12px;
+  font-weight: 800;
+
+  box-shadow: 0 8px 30px var(--rtc-shadow);
+}
+
+.rtc-header-title {
+  color: var(--rtc-text);
+
+  font-size: 15px;
+  font-weight: 700;
+
+  letter-spacing: -0.02em;
+}
+
+.rtc-header-subtitle {
+  display: none;
+
+  margin-top: 2px;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rtc-header-button {
+  display: flex;
+
+  height: 40px;
+
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  padding: 0 13px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 12px;
+
+  background: var(--rtc-surface);
+  color: var(--rtc-text-soft);
+
+  font-size: 12px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.rtc-header-button:hover {
+  background: var(--rtc-surface-hover);
+  border-color: var(--rtc-border-strong);
+  color: var(--rtc-text);
+}
+
+.rtc-header-button:active {
+  transform: scale(0.97);
+}
+
+.rtc-count-badge {
+  display: flex;
+
+  min-width: 20px;
+  height: 20px;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 0 6px;
+
+  border-radius: 999px;
+
+  background: var(--rtc-text);
+  color: var(--rtc-bg);
+
+  font-size: 10px;
+  font-weight: 700;
+}
+
+/* =========================================================
+   MAIN
+   ========================================================= */
+
+.rtc-main {
+  width: 100%;
+  height: calc(100dvh - 68px);
+
+  min-height: 0;
+
+  padding: 8px;
+
+  overflow: hidden;
+}
+
+.rtc-chat-frame {
+  display: flex;
+
+  width: 100%;
+  max-width: 1500px;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  margin: 0 auto;
+
+  overflow: hidden;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 22px;
+
+  background: var(--rtc-panel);
+
+  box-shadow: 0 30px 100px var(--rtc-shadow);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* =========================================================
+   SIDEBAR
+   ========================================================= */
+
+.rtc-sidebar {
+  display: flex;
+
+  width: 285px;
+  height: 100%;
+
+  min-width: 0;
+  min-height: 0;
+
+  flex-shrink: 0;
+  flex-direction: column;
+
+  border-right: 1px solid var(--rtc-border);
+
+  background: var(--rtc-panel);
+}
+
+.rtc-sidebar-header {
+  display: flex;
+
+  width: 100%;
+  height: 68px;
+
+  flex-shrink: 0;
+
+  align-items: center;
+
+  padding: 0 20px;
+
+  border-bottom: 1px solid var(--rtc-border);
+}
+
+.rtc-section-title {
+  color: var(--rtc-text);
+
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.rtc-section-subtitle {
+  margin-top: 2px;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 11px;
+  font-weight: 500;
+}
+
+/* =========================================================
+   QUICK CHAT
+   ========================================================= */
+
+.rtc-quick-chat {
+  flex-shrink: 0;
+
+  padding: 16px;
+
+  border-top: 1px solid var(--rtc-border);
+
+  background: var(--rtc-panel);
+}
+
+.rtc-eyebrow {
+  color: var(--rtc-text-muted);
+
+  font-size: 10px;
+  font-weight: 700;
+
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.rtc-quick-label {
+  padding: 2px 6px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 6px;
+
+  background: var(--rtc-surface);
+
+  color: var(--rtc-text-faint);
+
+  font-size: 10px;
+}
+
+.rtc-quick-user {
+  display: flex;
+
+  align-items: center;
+  gap: 12px;
+
+  padding: 10px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 16px;
+
+  background: var(--rtc-surface);
+
+  box-shadow: inset 0 1px 0 var(--rtc-inset);
+
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+/* =========================================================
+   CONVERSATION LIST
+   ========================================================= */
+
+.rtc-conversation-list {
+  display: flex;
+
+  height: 100%;
+  min-height: 0;
+
+  flex-direction: column;
+}
+
+.rtc-conversation-search {
+  position: relative;
+
+  flex-shrink: 0;
+
+  padding: 12px;
+
+  border-bottom: 1px solid var(--rtc-border);
+}
+
+.rtc-search-icon {
+  position: absolute;
+
+  top: 50%;
+  left: 24px;
+
+  width: 16px;
+  height: 16px;
+
+  transform: translateY(-50%);
+
+  color: var(--rtc-text-muted);
+
+  pointer-events: none;
+}
+
+.rtc-search-input {
+  width: 100%;
+  height: 40px;
+
+  padding: 0 12px 0 36px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 12px;
+
+  outline: none;
+
+  background: var(--rtc-input);
+  color: var(--rtc-text);
+
+  font-size: 12px;
+
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.rtc-search-input::placeholder {
+  color: var(--rtc-text-faint);
+}
+
+.rtc-search-input:focus {
+  background: var(--rtc-input-focus);
+
+  border-color: var(--rtc-border-strong);
+
+  box-shadow: 0 0 0 3px var(--rtc-selected);
+}
+
+.rtc-search-results {
+  position: absolute;
+
+  z-index: 20;
+
+  top: calc(100% - 1px);
+  right: 12px;
+  left: 12px;
+
+  max-height: 220px;
+
+  overflow-y: auto;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 14px;
+
+  background: var(--rtc-overlay);
+
+  box-shadow: 0 20px 50px var(--rtc-shadow);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.rtc-search-user {
+  display: flex;
+
+  align-items: center;
+  gap: 10px;
+
+  min-height: 58px;
+
+  padding: 10px 12px;
+
+  border-bottom: 1px solid var(--rtc-border);
+
+  background: transparent;
+
+  transition: background 140ms ease;
+}
+
+.rtc-search-user:last-child {
+  border-bottom: 0;
+}
+
+.rtc-search-user:hover {
+  background: var(--rtc-surface);
+}
+
+.rtc-avatar-search {
+  width: 34px;
+  height: 34px;
+
+  flex-shrink: 0;
+
+  font-size: 10px;
+}
+
+/* =========================================================
+   CONVERSATION ROW
+   ========================================================= */
+
+.rtc-conversation-scroll {
+  min-height: 0;
+
+  flex: 1;
+
+  overflow-y: auto;
+
+  overscroll-behavior: contain;
+}
+
+.rtc-conversation-item {
+  position: relative;
+
+  display: flex;
+
+  width: 100%;
+  min-width: 0;
+  min-height: 66px;
+
+  align-items: center;
+  gap: 12px;
+
+  padding: 12px 16px;
+
+  border: 0;
+
+  background: transparent;
+  color: inherit;
+
+  text-align: left;
+
+  cursor: pointer;
+
+  transition:
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.rtc-conversation-item:hover {
+  background: var(--rtc-surface);
+}
+
+.rtc-conversation-item:active {
+  transform: scale(0.995);
+}
+
+.rtc-conversation-item.is-selected {
+  background: var(--rtc-selected);
+}
+
+.rtc-selection-indicator {
+  position: absolute;
+
+  top: 9px;
+  bottom: 9px;
+  left: 0;
+
+  width: 2px;
+
+  border-radius: 0 999px 999px 0;
+
+  background: var(--rtc-text);
+}
+
+.rtc-conversation-item .rtc-avatar {
+  width: 42px;
+  height: 42px;
+
+  flex-shrink: 0;
+}
+
+.rtc-conversation-name {
+  display: block;
+
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: var(--rtc-text-soft);
+
+  font-size: 12px;
+  font-weight: 650;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtc-conversation-name.is-selected {
+  color: var(--rtc-text);
+}
+
+.rtc-conversation-status {
+  flex-shrink: 0;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 9px;
+  line-height: 1;
+}
+
+.rtc-conversation-status.is-online {
+  color: #10b981;
+}
+
+.rtc-separator {
+  flex-shrink: 0;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 9px;
+}
+
+.rtc-last-message {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 11px;
+  line-height: 1.3;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* =========================================================
+   AVATARS
+   ========================================================= */
+
+.rtc-avatar {
+  display: flex;
+
+  width: 40px;
+  height: 40px;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 999px;
+
+  background: var(--rtc-surface);
+
+  color: var(--rtc-text-soft);
+
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rtc-avatar-small {
+  width: 36px;
+  height: 36px;
+}
+
+.rtc-avatar.is-selected {
+  border-color: var(--rtc-border-strong);
+
+  background: var(--rtc-text);
+  color: var(--rtc-bg);
+}
+
+.rtc-status-dot {
+  position: absolute;
+
+  right: 0;
+  bottom: 0;
+
+  width: 10px;
+  height: 10px;
+
+  border: 2px solid var(--rtc-bg);
+  border-radius: 999px;
+
+  background: var(--rtc-text-faint);
+}
+
+.rtc-status-dot.is-online {
+  background: #10b981;
+}
+
+/* =========================================================
+   SHARED
+   ========================================================= */
+
+.rtc-user-name {
+  overflow: hidden;
+
+  color: var(--rtc-text-soft);
+
+  font-size: 12px;
+  font-weight: 600;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtc-user-email {
+  overflow: hidden;
+
+  margin-top: 2px;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 10px;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtc-small-button {
+  flex-shrink: 0;
+
+  min-height: 34px;
+
+  padding: 6px 10px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 8px;
+
+  background: var(--rtc-surface);
+  color: var(--rtc-text-soft);
+
+  font-size: 10px;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    transform 140ms ease;
+}
+
+.rtc-small-button:hover:not(:disabled) {
+  background: var(--rtc-surface-hover);
+
+  border-color: var(--rtc-border-strong);
+
+  color: var(--rtc-text);
+}
+
+.rtc-small-button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.rtc-small-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
+}
+
+.rtc-muted-row {
+  display: flex;
+
+  align-items: center;
+  gap: 8px;
+
+  padding: 12px;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 12px;
+}
+
+.rtc-muted-text {
+  color: var(--rtc-text-faint);
+
+  font-size: 12px;
+}
+
+.rtc-muted-title {
+  color: var(--rtc-text-muted);
+
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.rtc-muted-description {
+  margin-top: 4px;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 10px;
+}
+
+.rtc-spinner {
+  width: 12px;
+  height: 12px;
+
+  flex-shrink: 0;
+
+  border: 2px solid var(--rtc-border);
+  border-top-color: var(--rtc-text-soft);
+
+  border-radius: 999px;
+
+  animation: rtc-spin 700ms linear infinite;
+}
+
+@keyframes rtc-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* =========================================================
+   EMPTY STATES
+   ========================================================= */
+
+.rtc-no-conversations {
+  padding: 40px 20px;
+
+  text-align: center;
+}
+
+.rtc-empty-small-icon {
+  display: flex;
+
+  width: 44px;
+  height: 44px;
+
+  align-items: center;
+  justify-content: center;
+
+  margin: 0 auto 12px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 12px;
+
+  background: var(--rtc-surface);
+
+  font-size: 18px;
+}
+
+.rtc-empty-state {
+  display: flex;
+
+  width: 100%;
+  height: 100%;
+
+  align-items: center;
+  justify-content: center;
+
+  padding: 32px;
+
+  text-align: center;
+}
+
+.rtc-empty-icon {
+  display: flex;
+
+  width: 64px;
+  height: 64px;
+
+  align-items: center;
+  justify-content: center;
+
+  margin: 0 auto 20px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 20px;
+
+  background: var(--rtc-surface);
+
+  font-size: 24px;
+
+  box-shadow: 0 20px 50px var(--rtc-shadow);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.rtc-empty-title {
+  color: var(--rtc-text);
+
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.rtc-empty-description {
+  max-width: 380px;
+
+  margin-top: 8px;
+
+  color: var(--rtc-text-muted);
+
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.rtc-empty-message-title {
+  color: var(--rtc-text-soft);
+
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.rtc-empty-message-description {
+  margin-top: 4px;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 12px;
+}
+
+/* =========================================================
+   CHAT PANEL
+   ========================================================= */
+
+.rtc-chat-panel {
+  display: flex;
+
+  min-width: 0;
+  min-height: 0;
+
+  flex: 1;
+
+  flex-direction: column;
+
+  background: var(--rtc-bg);
+}
+
+.rtc-chat-header {
+  display: flex;
+
+  width: 100%;
+  height: 68px;
+
+  flex-shrink: 0;
+
+  align-items: center;
+
+  padding: 0 20px;
+
+  border-bottom: 1px solid var(--rtc-border);
+
+  background: var(--rtc-overlay);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.rtc-chat-user {
+  min-width: 0;
+
+  overflow: hidden;
+
+  color: var(--rtc-text);
+
+  font-size: 14px;
+  font-weight: 700;
+
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rtc-presence {
+  display: flex;
+
+  align-items: center;
+  gap: 6px;
+
+  margin-top: 2px;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.rtc-presence.is-online {
+  color: #10b981;
+}
+
+.rtc-presence-dot {
+  width: 6px;
+  height: 6px;
+
+  flex-shrink: 0;
+
+  border-radius: 999px;
+
+  background: var(--rtc-text-faint);
+}
+
+.rtc-presence.is-online .rtc-presence-dot {
+  background: #10b981;
+}
+
+/* =========================================================
+   MOBILE BACK BUTTON
+   ========================================================= */
+
+.rtc-mobile-back {
+  display: none;
+
+  border: 0;
+
+  background: transparent;
+
+  color: var(--rtc-text);
+
+  cursor: pointer;
+}
+
+/* =========================================================
+   MESSAGES
+   ========================================================= */
+
+.rtc-messages {
+  min-width: 0;
+  min-height: 0;
+
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 20px 16px;
+
+  background: var(--rtc-bg);
+
+  overscroll-behavior: contain;
+
+  scrollbar-width: thin;
+  scrollbar-color:
+    var(--rtc-text-faint)
+    transparent;
+}
+
+.rtc-messages::-webkit-scrollbar,
+.rtc-conversation-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rtc-messages::-webkit-scrollbar-track,
+.rtc-conversation-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.rtc-messages::-webkit-scrollbar-thumb,
+.rtc-conversation-scroll::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+
+  background: var(--rtc-text-faint);
+}
+
+.rtc-messages::-webkit-scrollbar-thumb:hover,
+.rtc-conversation-scroll::-webkit-scrollbar-thumb:hover {
+  background: var(--rtc-text-muted);
+}
+
+.rtc-message {
+  max-width: 78%;
+
+  padding: 10px 16px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 20px;
+
+  box-shadow: 0 8px 30px var(--rtc-shadow);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.rtc-message.is-mine {
+  border-bottom-right-radius: 6px;
+
+  background: var(--rtc-surface);
+  color: var(--rtc-text);
+}
+
+.rtc-message.is-theirs {
+  border-bottom-left-radius: 6px;
+
+  background: var(--rtc-panel);
+  color: var(--rtc-text-soft);
+}
+
+.rtc-message p {
+  overflow-wrap: anywhere;
+
+  white-space: pre-wrap;
+
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.rtc-message-status {
+  display: flex;
+
+  justify-content: flex-end;
+
+  margin-top: 4px;
+
+  color: var(--rtc-text-faint);
+
+  font-size: 9px;
+  font-weight: 600;
+}
+
+.rtc-message-status .is-read {
+  color: var(--rtc-text-soft);
+}
+
+/* =========================================================
+   TYPING + COMPOSER
+   ========================================================= */
+
+.rtc-typing-bar {
+  flex-shrink: 0;
+
+  padding: 8px 20px;
+
+  border-top: 1px solid var(--rtc-border);
+
+  background: var(--rtc-overlay);
+
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.rtc-composer {
+  flex-shrink: 0;
+
+  padding: 12px;
+
+  border-top: 1px solid var(--rtc-border);
+
+  background: var(--rtc-overlay);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+/* =========================================================
+   MESSAGE INPUT
+   ========================================================= */
+
+.rtc-message-input {
+  display: flex;
+
+  width: 100%;
+
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 18px;
+
+  background: var(--rtc-input);
+
+  box-shadow: 0 10px 40px var(--rtc-shadow);
+
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+}
+
+.rtc-message-input input {
+  min-width: 0;
+
+  flex: 1;
+
+  height: 44px;
+
+  padding: 0 12px;
+
+  border: 0;
+  outline: 0;
+
+  background: transparent;
+  color: var(--rtc-text);
+
+  font-size: 13px;
+}
+
+.rtc-message-input input::placeholder {
+  color: var(--rtc-text-faint);
+}
+
+.rtc-message-input button {
+  display: flex;
+
+  width: 44px;
+  height: 44px;
+
+  flex-shrink: 0;
+
+  align-items: center;
+  justify-content: center;
+
+  border: 1px solid var(--rtc-border);
+  border-radius: 14px;
+
+  background: var(--rtc-text);
+  color: var(--rtc-bg);
+
+  cursor: pointer;
+
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.rtc-message-input button:hover:not(:disabled) {
+  opacity: 0.88;
+}
+
+.rtc-message-input button:active:not(:disabled) {
+  transform: scale(0.96);
+}
+
+.rtc-message-input button:disabled {
+  cursor: not-allowed;
+
+  background: var(--rtc-surface);
+  color: var(--rtc-text-faint);
+}
+
+/* =========================================================
+   DESKTOP
+   ========================================================= */
+
+@media (min-width: 768px) {
+  .rtc-header {
+    padding: 0 28px;
+  }
+
+  .rtc-main {
+    padding: 16px;
+  }
+
+  .rtc-messages {
+    padding-right: 24px;
+    padding-left: 24px;
+  }
+
+  .rtc-composer {
+    padding: 16px;
+  }
+
+  .rtc-header-subtitle {
+    display: block;
+  }
+}
+
+@media (min-width: 1024px) {
+  .rtc-sidebar {
+    width: 330px;
+  }
+
+  .rtc-main {
+    padding: 20px;
+  }
+}
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
+@media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+
+    min-height: 100%;
+
+    margin: 0;
+
+    overflow: hidden;
+  }
+
+  body {
+    overscroll-behavior: none;
+  }
+
+  .rtc-chat-shell {
+    position: relative;
+
+    width: 100%;
+    height: 100dvh;
+
+    min-height: 100dvh;
+
+    overflow: hidden;
+
+    background: var(--rtc-bg);
+  }
+
+  /* =======================================================
+     TOP HEADER
+     ======================================================= */
+
+  .rtc-header {
+    position: relative;
+
+    z-index: 100;
+
+    width: 100%;
+    height: 60px;
+
+    padding:
+      0
+      calc(12px + env(safe-area-inset-right))
+      0
+      calc(12px + env(safe-area-inset-left));
+
+    background: var(--rtc-overlay);
+
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+  }
+
+  .rtc-brand-mark {
+    width: 36px;
+    height: 36px;
+
+    border-radius: 11px;
+
+    font-size: 11px;
+  }
+
+  .rtc-header-title {
+    font-size: 14px;
+  }
+
+  .rtc-header-subtitle {
+    display: none;
+  }
+
+  .rtc-header-button {
+    width: 40px;
+    height: 40px;
+
+    padding: 0;
+
+    border-radius: 12px;
+  }
+
+  .rtc-header-button span:not(.rtc-count-badge) {
+    font-size: 18px;
+  }
+
+  /* =======================================================
+     MAIN
+     ======================================================= */
+
+  .rtc-main {
+    position: relative;
+
+    width: 100%;
+    height: calc(100dvh - 60px);
+
+    min-height: 0;
+
+    padding: 0;
+
+    overflow: hidden;
+  }
+
+  /* =======================================================
+     MOBILE FRAME
+     ======================================================= */
+
+  .rtc-chat-frame {
+    position: relative;
+
+    display: block;
+
+    width: 100%;
+    height: 100%;
+
+    min-width: 100%;
+    min-height: 100%;
+
+    max-width: none;
+
+    margin: 0;
+    padding: 0;
+
+    overflow: hidden;
+
+    border: 0;
+    border-radius: 0;
+
+    background: var(--rtc-bg);
+
+    box-shadow: none;
+
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  /* =======================================================
+     CONVERSATION SCREEN
+     ======================================================= */
+
+  .rtc-sidebar {
+    position: absolute;
+
+    z-index: 20;
+
+    inset: 0;
+
+    display: flex;
+
+    width: 100%;
+    height: 100%;
+
+    min-width: 100%;
+    max-width: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    flex-direction: column;
+
+    border: 0;
+
+    background: var(--rtc-bg);
+
+    transform: translate3d(0, 0, 0);
+
+    opacity: 1;
+
+    transition:
+      transform 300ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 220ms ease;
+
+    will-change: transform;
+  }
+
+  .rtc-sidebar.is-mobile-hidden {
+    transform: translate3d(-100%, 0, 0);
+
+    opacity: 0;
+
+    pointer-events: none;
+  }
+
+  .rtc-sidebar-header {
+    width: 100%;
+    height: 58px;
+
+    padding: 0 16px;
+
+    border-bottom: 1px solid var(--rtc-border);
+  }
+
+  .rtc-section-title {
+    font-size: 15px;
+  }
+
+  .rtc-section-subtitle {
+    display: none;
+  }
+
+  /* =======================================================
+     SEARCH
+     ======================================================= */
+
+  .rtc-conversation-search {
+    padding: 10px 12px;
+
+    border-bottom: 1px solid var(--rtc-border);
+  }
+
+  .rtc-search-input {
+    height: 44px;
+
+    border-radius: 14px;
+
+    font-size: 14px;
+  }
+
+  .rtc-search-icon {
+    left: 24px;
+
+    width: 17px;
+    height: 17px;
+  }
+
+  .rtc-search-results {
+    right: 10px;
+    left: 10px;
+
+    max-height: 60dvh;
+
+    border-radius: 16px;
+  }
+
+  .rtc-search-user {
+    min-height: 64px;
+
+    padding: 10px 12px;
+  }
+
+  .rtc-avatar-search {
+    width: 40px;
+    height: 40px;
+
+    font-size: 11px;
+  }
+
+  /* =======================================================
+     CONVERSATIONS
+     ======================================================= */
+
+  .rtc-conversation-scroll {
+    min-height: 0;
+
+    flex: 1;
+
+    overflow-y: auto;
+
+    scrollbar-width: none;
+
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .rtc-conversation-scroll::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rtc-conversation-item {
+    width: 100%;
+
+    min-width: 0;
+    min-height: 72px;
+
+    gap: 12px;
+
+    padding: 10px 14px;
+  }
+
+  .rtc-conversation-item .rtc-avatar {
+    width: 50px;
+    height: 50px;
+
+    font-size: 12px;
+  }
+
+  .rtc-status-dot {
+    width: 11px;
+    height: 11px;
+
+    border-width: 2px;
+  }
+
+  .rtc-conversation-name {
+    font-size: 14px;
+    font-weight: 650;
+  }
+
+  .rtc-conversation-status,
+  .rtc-separator {
+    display: none;
+  }
+
+  .rtc-last-message {
+    margin-top: 3px;
+
+    font-size: 12px;
+  }
+
+  .rtc-count-badge {
+    min-width: 21px;
+    height: 21px;
+
+    font-size: 10px;
+  }
+
+  /* =======================================================
+     QUICK CHAT
+     ======================================================= */
+
+  .rtc-quick-chat {
+    width: 100%;
+
+    padding:
+      12px
+      14px
+      calc(12px + env(safe-area-inset-bottom));
+
+    border-top: 1px solid var(--rtc-border);
+  }
+
+  .rtc-quick-user {
+    min-height: 54px;
+
+    padding: 8px 10px;
+
+    border-radius: 14px;
+  }
+
+  .rtc-quick-user .rtc-avatar-small {
+    width: 38px;
+    height: 38px;
+  }
+
+  .rtc-small-button {
+    min-width: 58px;
+    min-height: 38px;
+
+    padding: 7px 12px;
+
+    border-radius: 10px;
+
+    font-size: 11px;
+  }
+
+  /* =======================================================
+     CHAT PANEL
+     ======================================================= */
+
+  .rtc-chat-panel {
+    position: absolute;
+
+    z-index: 30;
+
+    inset: 0;
+
+    display: flex;
+
+    width: 100%;
+    height: 100%;
+
+    min-width: 100%;
+    min-height: 100%;
+
+    max-width: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    flex-direction: column;
+
+    background: var(--rtc-bg);
+
+    transform: translate3d(100%, 0, 0);
+
+    opacity: 0;
+
+    pointer-events: none;
+
+    transition:
+      transform 320ms cubic-bezier(0.22, 1, 0.36, 1),
+      opacity 220ms ease;
+
+    will-change: transform;
+  }
+
+  .rtc-chat-panel.is-mobile-visible {
+    transform: translate3d(0, 0, 0);
+
+    opacity: 1;
+
+    pointer-events: auto;
+  }
+
+  /* =======================================================
+     CHAT HEADER
+     ======================================================= */
+
+  .rtc-chat-header {
+    width: 100%;
+    height: 60px;
+
+    flex-shrink: 0;
+
+    padding:
+      0
+      calc(12px + env(safe-area-inset-right))
+      0
+      calc(6px + env(safe-area-inset-left));
+
+    border-bottom: 1px solid var(--rtc-border);
+
+    background: var(--rtc-overlay);
+
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+  }
+
+  .rtc-mobile-back {
+    display: flex;
+
+    width: 42px;
+    height: 42px;
+
+    flex-shrink: 0;
+
+    margin-right: 2px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 0;
+    border-radius: 999px;
+
+    background: transparent;
+    color: var(--rtc-text);
+
+    font-family: Arial, sans-serif;
+    font-size: 34px;
+    font-weight: 300;
+    line-height: 1;
+
+    cursor: pointer;
+
+    transition:
+      background 160ms ease,
+      transform 160ms ease;
+  }
+
+  .rtc-mobile-back:hover {
+    background: var(--rtc-surface);
+  }
+
+  .rtc-mobile-back:active {
+    transform: scale(0.88);
+
+    background: var(--rtc-surface-hover);
+  }
+
+  .rtc-chat-header .rtc-avatar {
+    width: 40px;
+    height: 40px;
+  }
+
+  .rtc-chat-user {
+    font-size: 14px;
+  }
+
+  .rtc-presence {
+    font-size: 10px;
+  }
+
+  /* =======================================================
+     MESSAGES
+     ======================================================= */
+
+  .rtc-messages {
+    width: 100%;
+
+    min-width: 0;
+    min-height: 0;
+
+    flex: 1;
+
+    overflow-y: auto;
+
+    padding:
+      12px
+      10px
+      12px;
+
+    background: var(--rtc-bg);
+
+    -webkit-overflow-scrolling: touch;
+
+    scrollbar-width: none;
+  }
+
+  .rtc-messages::-webkit-scrollbar {
+    display: none;
+  }
+
+  .rtc-messages > div {
+    width: 100%;
+    max-width: none;
+  }
+
+  .rtc-message {
+    max-width: 84%;
+
+    padding: 9px 13px;
+
+    border-radius: 18px;
+
+    box-shadow:
+      0 4px 18px var(--rtc-shadow);
+  }
+
+  .rtc-message.is-mine {
+    border-bottom-right-radius: 5px;
+  }
+
+  .rtc-message.is-theirs {
+    border-bottom-left-radius: 5px;
+  }
+
+  .rtc-message p {
+    font-size: 14px;
+
+    line-height: 1.45;
+  }
+
+  .rtc-message-status {
+    margin-top: 3px;
+
+    font-size: 9px;
+  }
+
+  /* =======================================================
+     TYPING
+     ======================================================= */
+
+  .rtc-typing-bar {
+    width: 100%;
+
+    flex-shrink: 0;
+
+    padding: 6px 12px;
+
+    border-top: 1px solid var(--rtc-border);
+
+    background: var(--rtc-overlay);
+
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+  }
+
+  /* =======================================================
+     COMPOSER
+     ======================================================= */
+
+  .rtc-composer {
+    width: 100%;
+
+    flex-shrink: 0;
+
+    padding:
+      7px
+      8px
+      calc(7px + env(safe-area-inset-bottom));
+
+    border-top: 1px solid var(--rtc-border);
+
+    background: var(--rtc-overlay);
+
+    backdrop-filter: blur(28px);
+    -webkit-backdrop-filter: blur(28px);
+  }
+
+  .rtc-composer > div {
+    width: 100%;
+
+    max-width: none;
+  }
+
+  .rtc-message-input {
+    width: 100%;
+
+    min-height: 52px;
+
+    padding: 4px;
+
+    border-radius: 20px;
+  }
+
+  .rtc-message-input input {
+    width: 100%;
+
+    height: 44px;
+
+    padding: 0 10px;
+
+    font-size: 15px;
+  }
+
+  .rtc-message-input button {
+    width: 44px;
+    height: 44px;
+
+    border-radius: 15px;
+  }
+
+  /* =======================================================
+     EMPTY
+     ======================================================= */
+
+  .rtc-empty-state {
+    width: 100%;
+    height: 100%;
+
+    padding: 24px;
+  }
+
+  .rtc-empty-icon {
+    width: 58px;
+    height: 58px;
+
+    margin-bottom: 16px;
+
+    border-radius: 18px;
+  }
+
+  .rtc-empty-title {
+    font-size: 16px;
+  }
+
+  .rtc-empty-description {
+    max-width: 300px;
+
+    font-size: 13px;
+  }
+
+  .rtc-empty-message-description {
+    max-width: 250px;
+
+    margin-right: auto;
+    margin-left: auto;
+  }
+
+  /* =======================================================
+     TOUCH
+     ======================================================= */
+
+  button,
+  input {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .rtc-conversation-item,
+  .rtc-small-button,
+  .rtc-header-button,
+  .rtc-mobile-back,
+  .rtc-message-input button {
+    touch-action: manipulation;
+  }
+}
+
+/* =========================================================
+   SMALL ANDROID PHONES
+   ========================================================= */
+
+@media (max-width: 380px) {
+  .rtc-header {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .rtc-header-title {
+    font-size: 13px;
+  }
+
+  .rtc-header-button {
+    width: 38px;
+    height: 38px;
+  }
+
+  .rtc-conversation-item {
+    padding-right: 10px;
+    padding-left: 10px;
+  }
+
+  .rtc-conversation-item .rtc-avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  .rtc-message {
+    max-width: 88%;
+  }
+
+  .rtc-chat-header {
+    padding-left: 4px;
+  }
+}
+
+/* =========================================================
+   LANDSCAPE ANDROID
+   ========================================================= */
+
+@media (max-width: 767px) and (orientation: landscape) {
+  .rtc-header {
+    height: 52px;
+  }
+
+  .rtc-main {
+    height: calc(100dvh - 52px);
+  }
+
+  .rtc-chat-header {
+    height: 52px;
+  }
+
+  .rtc-messages {
+    padding-top: 8px;
+    padding-bottom: 8px;
+  }
+
+  .rtc-composer {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .rtc-message-input {
+    min-height: 46px;
+  }
+
+  .rtc-message-input input,
+  .rtc-message-input button {
+    height: 38px;
+  }
+}
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .rtc-chat-shell *,
+  .rtc-chat-shell *::before,
+  .rtc-chat-shell *::after {
+    scroll-behavior: auto !important;
+
+    transition-duration: 0.01ms !important;
+
+    animation-duration: 0.01ms !important;
+  }
+}
+
+/* =========================================================
+   MOBILE CHAT NAVIGATION — DESKTOP RESET
+   ========================================================= */
+
+@media (min-width: 768px) {
+  .rtc-mobile-back {
+    display: none !important;
+  }
+
+  .rtc-sidebar {
+    position: relative;
+    inset: auto;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .rtc-chat-panel,
+  .rtc-chat-panel.is-mobile-visible,
+  .rtc-chat-panel.is-mobile-hidden {
+    position: relative;
+    inset: auto;
+    transform: none !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
+    width: auto;
+    min-width: 0;
+    max-width: none;
+  }
+}
+
+===== FILE: src/app/App.tsx =====
+
+import React from "react";
+import Navigation from "./navigation";
+const App = () => {
+  return <Navigation />;
+};
+
+export default App;
+
+
+===== FILE: src/app/navigation.tsx =====
+
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+
+import Login from "../features/auth/Login";
+import Register from "../features/auth/Register";
+import ChatScreen from "../features/chat/ChatScreen";
+import Friends from "../features/friends/Friends";
+import ProtectedRoute from "./ProtectedRoute";
+
+export default function Navigation() {
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/login" element={<Login />} />
+
+        <Route path="/register" element={<Register />} />
+
+        <Route
+          path="/chat"
+          element={
+            <ProtectedRoute>
+              <ChatScreen />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/friends"
+          element={
+            <ProtectedRoute>
+              <Friends />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route path="/" element={<Navigate to="/chat" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+
+===== FILE: src/app/ProtectedRoute.tsx =====
+
+import { useEffect } from "react";
+import { Navigate } from "react-router-dom";
+import { useAuthStore } from "../features/auth/authStore";
+import { connectSocket, disconnectSocket } from "../services/socket";
+
+type ProtectedRouteProps = {
+  children: React.ReactNode;
+};
+
+export default function ProtectedRoute({ children }: ProtectedRouteProps) {
+  const token = useAuthStore((state) => state.token);
+  const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
+
+  useEffect(() => {
+    if (!token) {
+      disconnectSocket();
+      return;
+    }
+
+    connectSocket(token);
+
+    return () => {
+      disconnectSocket();
+    };
+  }, [token]);
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
+
+
+===== FILE: src/features/chat/ChatScreen.tsx =====
+
+import { useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+
+import { useAuthStore } from "../auth/authStore";
+import MessageInput from "./MessageInput";
+import ConversationList from "./ConversationList";
+import { useChatStore } from "./chatStore";
+import { socket } from "../../services/socket";
+import TypingIndicator from "./TypingIndicator";
+import { getFriendRequests } from "../../services/api";
+import { subscribeToFriendEvents } from "../friends/friendsRealtime";
+import { usePresenceStore } from "../presence/presenceStore";
+
+type User = {
+  id: string;
+  username: string;
+  email: string;
+};
+
+type Theme = "dark" | "light";
+
+export default function ChatScreen() {
+  const token = useAuthStore((state) => state.token);
+  const currentUser = useAuthStore((state) => state.user);
+
+  const navigate = useNavigate();
+
+  const currentConversation = useChatStore(
+    (state) => state.currentConversation,
+  );
+
+  const currentConversationId = useChatStore(
+    (state) => state.currentConversationId,
+  );
+
+  const messages = useChatStore((state) => state.messages);
+
+  const setConversation = useChatStore(
+    (state) => state.setConversation,
+  );
+
+  const setMessages = useChatStore(
+    (state) => state.setMessages,
+  );
+
+  const [users, setUsers] = useState<User[]>([]);
+  const [loadingUsers, setLoadingUsers] = useState(true);
+  const [creatingConversation, setCreatingConversation] =
+    useState(false);
+
+  const [friendRequestCount, setFriendRequestCount] =
+    useState(0);
+
+  const [typingUser, setTypingUser] = useState<{
+    userId: string;
+    username: string;
+  } | null>(null);
+
+  const [theme, setTheme] = useState<Theme>(() => {
+    return localStorage.getItem("rtc-theme") === "light"
+      ? "light"
+      : "dark";
+  });
+
+  /*
+   * =========================================================
+   * MOBILE NAVIGATION
+   * =========================================================
+   */
+
+  const [mobileChatOpen, setMobileChatOpen] = useState(false);
+
+  const onlineUserIds = usePresenceStore(
+    (state) => state.onlineUserIds,
+  );
+
+  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+
+  const readReceiptTimerRef = useRef<
+    ReturnType<typeof setTimeout> | null
+  >(null);
+
+  const lastReadReceiptSignatureRef =
+    useRef<string | null>(null);
+
+  /*
+   * =========================================================
+   * DERIVED DATA
+   * =========================================================
+   */
+
+  const unreadIncomingMessageIds = messages
+    .filter(
+      (message) =>
+        message.conversationId === currentConversationId &&
+        message.senderId !== currentUser?.id &&
+        !message.readAt,
+    )
+    .map((message) => message.id);
+
+  const unreadIncomingSignature =
+    unreadIncomingMessageIds.length > 0 &&
+    currentConversationId
+      ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
+      : null;
+
+  /*
+   * Keep your temporary restriction:
+   * only show dhillon2317 in Quick Chat.
+   */
+  const startChatUsers = users.filter(
+    (user) =>
+      user.username === "dhillon2317" &&
+      user.id !== currentUser?.id,
+  );
+
+  const selectedUser =
+    currentConversation?.members.find(
+      (member) => member.user.id !== currentUser?.id,
+    )?.user ?? null;
+
+  const isSelectedUserOnline = selectedUser
+    ? onlineUserIds.includes(selectedUser.id)
+    : false;
+
+  const latestOutgoingMessageId =
+    [...messages]
+      .reverse()
+      .find(
+        (message) =>
+          message.senderId === currentUser?.id,
+      )?.id ?? null;
+
+  const isDark = theme === "dark";
+
+  /*
+   * =========================================================
+   * THEME
+   * =========================================================
+   */
+
+  useEffect(() => {
+    localStorage.setItem("rtc-theme", theme);
+  }, [theme]);
+
+  /*
+   * =========================================================
+   * LOAD USERS
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchUsers = async () => {
+      try {
+        setLoadingUsers(true);
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/users`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to fetch users",
+          );
+        }
+
+        setUsers(data.users);
+      } catch (error) {
+        console.error("Fetch users error:", error);
+      } finally {
+        setLoadingUsers(false);
+      }
+    };
+
+    void fetchUsers();
+  }, [token]);
+
+  /*
+   * =========================================================
+   * FRIEND REQUEST COUNT
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (!token) {
+      setFriendRequestCount(0);
+      return;
+    }
+
+    let cancelled = false;
+
+    const refreshFriendRequests = async () => {
+      try {
+        const requests = await getFriendRequests(token);
+
+        if (!cancelled) {
+          setFriendRequestCount(requests.length);
+        }
+      } catch (error) {
+        console.error(
+          "Load friend requests count error:",
+          error,
+        );
+      }
+    };
+
+    void refreshFriendRequests();
+
+    const unsubscribe = subscribeToFriendEvents({
+      onNewRequest: () => void refreshFriendRequests(),
+      onAccepted: () => void refreshFriendRequests(),
+    });
+
+    return () => {
+      cancelled = true;
+      unsubscribe();
+    };
+  }, [token]);
+
+  /*
+   * =========================================================
+   * LOAD MESSAGES
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (!token || !currentConversationId) {
+      setTypingUser(null);
+      setMessages([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/messages/${currentConversationId}`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to load messages",
+          );
+        }
+
+        if (cancelled) return;
+
+        const existingMessages =
+          useChatStore.getState().messages;
+
+        const mergedMessages = [
+          ...data.messages,
+          ...existingMessages.filter(
+            (existingMessage) =>
+              !data.messages.some(
+                (message: { id: string }) =>
+                  message.id === existingMessage.id,
+              ),
+          ),
+        ].sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() -
+            new Date(b.createdAt).getTime(),
+        );
+
+        setMessages(mergedMessages);
+      } catch (error) {
+        console.error("Load messages error:", error);
+      }
+    };
+
+    void fetchMessages();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [currentConversationId, setMessages, token]);
+
+  /*
+   * =========================================================
+   * READ RECEIPTS
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (readReceiptTimerRef.current) {
+      clearTimeout(readReceiptTimerRef.current);
+      readReceiptTimerRef.current = null;
+    }
+
+    if (
+      !token ||
+      !currentConversationId ||
+      !currentUser
+    ) {
+      lastReadReceiptSignatureRef.current = null;
+      return;
+    }
+
+    if (!unreadIncomingSignature) {
+      lastReadReceiptSignatureRef.current = null;
+      return;
+    }
+
+    if (
+      lastReadReceiptSignatureRef.current ===
+      unreadIncomingSignature
+    ) {
+      return;
+    }
+
+    lastReadReceiptSignatureRef.current =
+      unreadIncomingSignature;
+
+    readReceiptTimerRef.current = setTimeout(() => {
+      socket.emit("conversation:read", {
+        conversationId: currentConversationId,
+      });
+    }, 100);
+
+    return () => {
+      if (readReceiptTimerRef.current) {
+        clearTimeout(readReceiptTimerRef.current);
+        readReceiptTimerRef.current = null;
+      }
+    };
+  }, [
+    currentConversationId,
+    currentUser?.id,
+    token,
+    unreadIncomingSignature,
+  ]);
+
+  /*
+   * =========================================================
+   * TYPING INDICATOR
+   * =========================================================
+   */
+
+  useEffect(() => {
+    if (!currentConversationId) {
+      setTypingUser(null);
+      return;
+    }
+
+    const handleUserTyping = (user: {
+      conversationId: string;
+      userId: string;
+      username: string;
+    }) => {
+      if (
+        user.conversationId !== currentConversationId ||
+        user.userId === currentUser?.id
+      ) {
+        return;
+      }
+
+      setTypingUser({
+        userId: user.userId,
+        username: user.username,
+      });
+    };
+
+    const handleUserStoppedTyping = (user: {
+      conversationId: string;
+      userId: string;
+    }) => {
+      if (
+        user.conversationId !== currentConversationId ||
+        user.userId === currentUser?.id
+      ) {
+        return;
+      }
+
+      setTypingUser(null);
+    };
+
+    socket.on("userTyping", handleUserTyping);
+    socket.on(
+      "userStoppedTyping",
+      handleUserStoppedTyping,
+    );
+
+    return () => {
+      socket.off("userTyping", handleUserTyping);
+      socket.off(
+        "userStoppedTyping",
+        handleUserStoppedTyping,
+      );
+
+      setTypingUser(null);
+    };
+  }, [currentConversationId, currentUser?.id]);
+
+  /*
+   * =========================================================
+   * AUTO SCROLL
+   * =========================================================
+   */
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "end",
+    });
+  }, [messages]);
+
+  /*
+   * =========================================================
+   * OPEN CONVERSATION
+   * =========================================================
+   */
+
+  const openConversation = async (conversation: {
+    id: string;
+    createdAt: string;
+    unreadCount?: number;
+    members: {
+      user: User;
+    }[];
+    messages: {
+      id: string;
+      conversationId: string;
+      senderId: string;
+      text: string;
+      createdAt: string;
+      deliveredAt?: string | null;
+      readAt?: string | null;
+    }[];
+  }) => {
+    setConversation(conversation);
+
+    /*
+     * This is the important mobile fix.
+     *
+     * ConversationList opens the chat panel instead
+     * of leaving it off-screen.
+     */
+    setMobileChatOpen(true);
+  };
+
+  /*
+   * =========================================================
+   * MOBILE BACK
+   * =========================================================
+   */
+
+  const closeMobileChat = () => {
+    setMobileChatOpen(false);
+  };
+
+  /*
+   * =========================================================
+   * START CONVERSATION
+   * =========================================================
+   */
+
+  const startConversation = async (user: User) => {
+    if (!token || creatingConversation) return;
+
+    try {
+      setCreatingConversation(true);
+
+      const response = await fetch(
+        `${import.meta.env.VITE_API_URL}/conversations`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            userId: user.id,
+          }),
+        },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Failed to create conversation",
+        );
+      }
+
+      await openConversation(data.conversation);
+    } catch (error) {
+      console.error(
+        "Start conversation error:",
+        error,
+      );
+    } finally {
+      setCreatingConversation(false);
+    }
+  };
+
+  /*
+   * =========================================================
+   * SEND MESSAGE
+   * =========================================================
+   */
+
+  const sendMessage = (text: string) => {
+    if (!currentConversationId || !currentUser) {
+      return;
+    }
+
+    socket.emit("sendMessage", {
+      conversationId: currentConversationId,
+      text,
+    });
+  };
+
+  /*
+   * =========================================================
+   * RENDER
+   * =========================================================
+   */
+
+  return (
+    <div
+      data-theme={theme}
+      className={`rtc-chat-shell ${
+        isDark
+          ? "rtc-theme-dark"
+          : "rtc-theme-light"
+      }`}
+    >
+      {/* =====================================================
+          HEADER
+          ===================================================== */}
+
+      <header className="rtc-header">
+        <div className="flex items-center gap-3">
+          <div className="rtc-brand-mark">
+            RT
+          </div>
+
+          <div>
+            <h1 className="rtc-header-title">
+              Real-Time Chat
+            </h1>
+
+            <p className="rtc-header-subtitle">
+              Connected conversations
+            </p>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            aria-label={`Switch to ${
+              isDark ? "light" : "dark"
+            } mode`}
+            title={`Switch to ${
+              isDark ? "light" : "dark"
+            } mode`}
+            onClick={() =>
+              setTheme((current) =>
+                current === "dark"
+                  ? "light"
+                  : "dark",
+              )
+            }
+            className="rtc-header-button"
+          >
+            <span className="text-base leading-none">
+              {isDark ? "☀" : "☾"}
+            </span>
+
+            <span className="hidden sm:inline">
+              {isDark ? "Light" : "Dark"}
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => navigate("/friends")}
+            className="rtc-header-button"
+          >
+            <span>Friends</span>
+
+            {friendRequestCount > 0 && (
+              <span className="rtc-count-badge">
+                {friendRequestCount}
+              </span>
+            )}
+          </button>
+        </div>
+      </header>
+
+      {/* =====================================================
+          MAIN
+          ===================================================== */}
+
+      <main className="rtc-main">
+        <div className="rtc-chat-frame">
+          {/* =================================================
+              SIDEBAR
+              ================================================= */}
+
+          <aside
+            className={`rtc-sidebar ${
+              mobileChatOpen
+                ? "is-mobile-hidden"
+                : ""
+            }`}
+          >
+            <div className="rtc-sidebar-header">
+              <div>
+                <h2 className="rtc-section-title">
+                  Conversations
+                </h2>
+
+                <p className="rtc-section-subtitle">
+                  Your recent chats
+                </p>
+              </div>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <ConversationList
+                onSelectConversation={
+                  openConversation
+                }
+                currentConversationId={
+                  currentConversationId
+                }
+              />
+            </div>
+
+            {/* QUICK CHAT */}
+
+            <div className="rtc-quick-chat">
+              <div className="mb-3 flex items-center justify-between">
+                <h3 className="rtc-eyebrow">
+                  Start a chat
+                </h3>
+
+                <span className="rtc-quick-label">
+                  Quick
+                </span>
+              </div>
+
+              {loadingUsers ? (
+                <div className="rtc-muted-row">
+                  <span className="rtc-spinner" />
+                  Loading users...
+                </div>
+              ) : startChatUsers.length === 0 ? (
+                <p className="rtc-muted-text">
+                  No other users found.
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {startChatUsers.map((user) => {
+                    const isOnline =
+                      onlineUserIds.includes(
+                        user.id,
+                      );
+
+                    return (
+                      <div
+                        key={user.id}
+                        className="rtc-quick-user"
+                      >
+                        <div className="relative shrink-0">
+                          <div className="rtc-avatar rtc-avatar-small">
+                            {user.username
+                              .slice(0, 2)
+                              .toUpperCase()}
+                          </div>
+
+                          <span
+                            className={`rtc-status-dot ${
+                              isOnline
+                                ? "is-online"
+                                : ""
+                            }`}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="rtc-user-name">
+                            {user.username}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() =>
+                            startConversation(
+                              user,
+                            )
+                          }
+                          disabled={
+                            creatingConversation
+                          }
+                          className="rtc-small-button"
+                        >
+                          {creatingConversation
+                            ? "..."
+                            : "Chat"}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </aside>
+
+          {/* =================================================
+              CHAT PANEL
+              ================================================= */}
+
+          <section
+            className={`rtc-chat-panel ${
+              mobileChatOpen
+                ? "is-mobile-visible"
+                : "is-mobile-hidden"
+            }`}
+          >
+            {!selectedUser ||
+            !currentConversationId ? (
+              <div className="rtc-empty-state">
+                <div>
+                  <div className="rtc-empty-icon">
+                    💬
+                  </div>
+
+                  <h2 className="rtc-empty-title">
+                    Select a conversation
+                  </h2>
+
+                  <p className="rtc-empty-description">
+                    Choose a conversation from
+                    the sidebar to start messaging
+                    in real time.
+                  </p>
+                </div>
+              </div>
+            ) : (
+              <>
+                {/* CHAT HEADER */}
+
+                <div className="rtc-chat-header">
+                  {/* MOBILE BACK BUTTON */}
+
+                  <button
+                    type="button"
+                    className="rtc-mobile-back"
+                    onClick={
+                      closeMobileChat
+                    }
+                    aria-label="Back to conversations"
+                  >
+                    ‹
+                  </button>
+
+                  <div className="relative mr-3 shrink-0">
+                    <div className="rtc-avatar">
+                      {selectedUser.username
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+
+                    <span
+                      className={`rtc-status-dot ${
+                        isSelectedUserOnline
+                          ? "is-online"
+                          : ""
+                      }`}
+                    />
+                  </div>
+
+                  <div className="min-w-0">
+                    <h2 className="rtc-chat-user">
+                      {selectedUser.username}
+                    </h2>
+
+                    <div
+                      className={`rtc-presence ${
+                        isSelectedUserOnline
+                          ? "is-online"
+                          : ""
+                      }`}
+                    >
+                      <span className="rtc-presence-dot" />
+
+                      {isSelectedUserOnline
+                        ? "Online"
+                        : "Offline"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* MESSAGE AREA */}
+
+                <div className="rtc-messages rtc-scrollbar">
+                  {messages.length === 0 ? (
+                    <div className="flex h-full items-center justify-center">
+                      <div className="text-center">
+                        <div className="mb-3 text-2xl">
+                          👋
+                        </div>
+
+                        <p className="rtc-empty-message-title">
+                          No messages yet
+                        </p>
+
+                        <p className="rtc-empty-message-description">
+                          Say hello and start the
+                          conversation.
+                        </p>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="mx-auto flex max-w-4xl flex-col gap-2.5">
+                      {messages.map((message) => {
+                        const isMine =
+                          message.senderId ===
+                          currentUser?.id;
+
+                        const isLatestOutgoingMessage =
+                          isMine &&
+                          message.id ===
+                            latestOutgoingMessageId;
+
+                        const messageStatus =
+                          message.readAt
+                            ? "✓✓"
+                            : message.deliveredAt
+                              ? "✓✓"
+                              : "✓";
+
+                        return (
+                          <div
+                            key={message.id}
+                            className={`flex ${
+                              isMine
+                                ? "justify-end"
+                                : "justify-start"
+                            }`}
+                          >
+                            <div
+                              className={`rtc-message ${
+                                isMine
+                                  ? "is-mine"
+                                  : "is-theirs"
+                              }`}
+                            >
+                              <p>
+                                {message.text}
+                              </p>
+
+                              {isLatestOutgoingMessage && (
+                                <div className="rtc-message-status">
+                                  <span
+                                    className={
+                                      message.readAt
+                                        ? "is-read"
+                                        : ""
+                                    }
+                                  >
+                                    {
+                                      messageStatus
+                                    }
+                                  </span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+
+                      <div ref={messagesEndRef} />
+                    </div>
+                  )}
+                </div>
+
+                {/* TYPING */}
+
+                {typingUser &&
+                  typingUser.userId !==
+                    currentUser?.id && (
+                    <div className="rtc-typing-bar">
+                      <TypingIndicator
+                        username={
+                          typingUser.username
+                        }
+                      />
+                    </div>
+                  )}
+
+                {/* COMPOSER */}
+
+                <div className="rtc-composer">
+                  <div className="mx-auto max-w-4xl">
+                    <MessageInput
+                      onSend={sendMessage}
+                      theme={theme}
+                    />
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+===== FILE: src/features/chat/chatStore.ts =====
+
+import { create } from "zustand";
+import { socket } from "../../services/socket";
+import { useAuthStore } from "../auth/authStore";
+
+export type ChatUser = {
+  id: string;
+  username: string;
+  email: string;
+};
+
+export type Message = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+};
+
+export type Conversation = {
+  id: string;
+  createdAt: string;
+  unreadCount?: number;
+  members: {
+    user: ChatUser;
+  }[];
+  messages: Message[];
+};
+
+type ChatState = {
+  currentConversationId: string | null;
+  currentConversation: Conversation | null;
+  messages: Message[];
+  setConversation: (conversation: Conversation | null) => void;
+  setMessages: (messages: Message[]) => void;
+  addMessage: (message: Message) => void;
+  clearMessages: () => void;
+};
+
+export const useChatStore = create<ChatState>((set, get) => ({
+  currentConversationId: null,
+  currentConversation: null,
+  messages: [],
+
+  setConversation: (conversation) => {
+    if (!conversation) {
+      const currentConversationId = get().currentConversationId;
+
+      if (currentConversationId) {
+        socket.emit("leaveConversation", currentConversationId);
+      }
+
+      set({
+        currentConversationId: null,
+        currentConversation: null,
+        messages: [],
+      });
+
+      return;
+    }
+
+    const currentConversationId = get().currentConversationId;
+
+    if (currentConversationId && currentConversationId !== conversation.id) {
+      socket.emit("leaveConversation", currentConversationId);
+    }
+
+    socket.emit("joinConversation", conversation.id);
+
+    set({
+      currentConversationId: conversation.id,
+      currentConversation: {
+        ...conversation,
+        messages: conversation.messages ?? [],
+      },
+      messages: conversation.messages ?? [],
+    });
+  },
+
+  setMessages: (messages) => {
+    set((state) => ({
+      messages,
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages,
+          }
+        : state.currentConversation,
+    }));
+  },
+
+  addMessage: (message) => {
+    set((state) => ({
+      messages: state.messages.some((item) => item.id === message.id)
+        ? state.messages
+        : [...state.messages, message],
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages: state.currentConversation.messages.some(
+              (item) => item.id === message.id,
+            )
+              ? state.currentConversation.messages
+              : [...state.currentConversation.messages, message],
+          }
+        : state.currentConversation,
+    }));
+  },
+
+  clearMessages: () => {
+    const currentConversationId = get().currentConversationId;
+
+    if (currentConversationId) {
+      socket.emit("leaveConversation", currentConversationId);
+    }
+
+    set({
+      currentConversationId: null,
+      currentConversation: null,
+      messages: [],
+    });
+  },
+}));
+
+socket.on("newMessage", (message: Message) => {
+  const currentConversationId = useChatStore.getState().currentConversationId;
+
+  if (message.conversationId === currentConversationId) {
+    useChatStore.getState().addMessage(message);
+  }
+
+  // If this message is from someone else,
+  // tell the server it has been delivered.
+  const currentUserId = useAuthStore.getState().user?.id;
+
+  if (currentUserId && message.senderId !== currentUserId) {
+    socket.emit("messageDelivered", {
+      messageId: message.id,
+    });
+  }
+});
+
+socket.on(
+  "message:read",
+  ({
+    conversationId,
+    messageIds,
+    readAt,
+  }: {
+    conversationId: string;
+    messageIds: string[];
+    readAt: string;
+  }) => {
+    const currentConversationId = useChatStore.getState().currentConversationId;
+
+    if (conversationId !== currentConversationId || messageIds.length === 0) {
+      return;
+    }
+
+    useChatStore.setState((state) => ({
+      messages: state.messages.map((message) =>
+        messageIds.includes(message.id)
+          ? {
+              ...message,
+              readAt,
+            }
+          : message,
+      ),
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages: state.currentConversation.messages.map((message) =>
+              messageIds.includes(message.id)
+                ? {
+                    ...message,
+                    readAt,
+                  }
+                : message,
+            ),
+          }
+        : state.currentConversation,
+    }));
+  },
+);
+socket.on(
+  "messageDelivered",
+  ({ messageId, deliveredAt }: { messageId: string; deliveredAt: string }) => {
+    useChatStore.setState((state) => ({
+      messages: state.messages.map((message) =>
+        message.id === messageId
+          ? {
+              ...message,
+              deliveredAt,
+            }
+          : message,
+      ),
+      currentConversation: state.currentConversation
+        ? {
+            ...state.currentConversation,
+            messages: state.currentConversation.messages.map((message) =>
+              message.id === messageId
+                ? {
+                    ...message,
+                    deliveredAt,
+                  }
+                : message,
+            ),
+          }
+        : state.currentConversation,
+    }));
+  },
+);
+
+
+===== FILE: src/features/chat/ConversationList.tsx =====
+
+import { useEffect, useMemo, useState } from "react";
+import { useAuthStore } from "../auth/authStore";
+import { socket } from "../../services/socket";
+import {
+  getUsers,
+  createConversation,
+} from "../../services/api";
+import type {
+  Conversation,
+  ChatUser,
+} from "./chatStore";
+import { usePresenceStore } from "../presence/presenceStore";
+
+type ConversationListProps = {
+  onSelectConversation: (conversation: Conversation) => void;
+  currentConversationId: string | null;
+};
+
+type NewMessagePayload = {
+  id: string;
+  conversationId: string;
+  senderId: string;
+  text: string;
+  createdAt: string;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+};
+
+type MessageReadPayload = {
+  conversationId: string;
+  messageIds: string[];
+  readAt: string;
+};
+
+export default function ConversationList({
+  onSelectConversation,
+  currentConversationId,
+}: ConversationListProps) {
+  const token = useAuthStore((state) => state.token);
+  const currentUser = useAuthStore((state) => state.user);
+
+  const onlineUserIds = usePresenceStore(
+    (state) => state.onlineUserIds,
+  );
+
+  const [conversations, setConversations] = useState<
+    Conversation[]
+  >([]);
+
+  const [users, setUsers] = useState<ChatUser[]>([]);
+  const [search, setSearch] = useState("");
+
+  const [loading, setLoading] = useState(true);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [startingChat, setStartingChat] = useState<string | null>(
+    null,
+  );
+
+  // ============================================================
+  // LOAD CONVERSATIONS
+  // ============================================================
+
+  useEffect(() => {
+    if (!token) {
+      setConversations([]);
+      setLoading(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadConversations = async () => {
+      try {
+        setLoading(true);
+
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/conversations`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message || "Failed to fetch conversations",
+          );
+        }
+
+        if (!cancelled) {
+          const loadedConversations: Conversation[] =
+            Array.isArray(data.conversations)
+              ? data.conversations
+              : [];
+
+          // Remove duplicate conversation IDs.
+          const uniqueConversations: Conversation[] = [];
+
+          const seenConversationIds = new Set<string>();
+
+          for (const conversation of loadedConversations) {
+            if (seenConversationIds.has(conversation.id)) {
+              continue;
+            }
+
+            seenConversationIds.add(conversation.id);
+            uniqueConversations.push(conversation);
+          }
+
+          setConversations(uniqueConversations);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error(
+            "Fetch conversations error:",
+            error,
+          );
+
+          setConversations([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    void loadConversations();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // ============================================================
+  // LOAD USERS FOR SEARCH
+  // ============================================================
+
+  useEffect(() => {
+    if (!token) {
+      setUsers([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const loadUsers = async () => {
+      try {
+        setUsersLoading(true);
+
+        const data = await getUsers(token);
+
+        if (!cancelled) {
+          setUsers(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          console.error("Fetch users error:", error);
+          setUsers([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setUsersLoading(false);
+        }
+      }
+    };
+
+    void loadUsers();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+
+  // ============================================================
+  // CLEAR SELECTED CONVERSATION UNREAD COUNT
+  // ============================================================
+
+  useEffect(() => {
+    if (!currentConversationId) return;
+
+    setConversations((previous) =>
+      previous.map((conversation) =>
+        conversation.id === currentConversationId
+          ? {
+              ...conversation,
+              unreadCount: 0,
+            }
+          : conversation,
+      ),
+    );
+  }, [currentConversationId]);
+
+  // ============================================================
+  // REAL-TIME NEW MESSAGE
+  // ============================================================
+
+  useEffect(() => {
+    const handleNewMessage = (
+      message: NewMessagePayload,
+    ) => {
+      setConversations((previous) => {
+        const existing = previous.find(
+          (conversation) =>
+            conversation.id === message.conversationId,
+        );
+
+        if (!existing) {
+          return previous;
+        }
+
+        const isCurrentConversation =
+          message.conversationId === currentConversationId;
+
+        const isMine =
+          message.senderId === currentUser?.id;
+
+        const unreadCount =
+          isCurrentConversation || isMine
+            ? 0
+            : (existing.unreadCount ?? 0) + 1;
+
+        const nextMessage = {
+          id: message.id,
+          conversationId: message.conversationId,
+          senderId: message.senderId,
+          text: message.text,
+          createdAt: message.createdAt,
+          deliveredAt: message.deliveredAt ?? null,
+          readAt: message.readAt ?? null,
+        };
+
+        const messages = [
+          nextMessage,
+          ...existing.messages.filter(
+            (item) => item.id !== message.id,
+          ),
+        ];
+
+        const updatedConversation: Conversation = {
+          ...existing,
+          unreadCount,
+          messages,
+        };
+
+        return [
+          updatedConversation,
+          ...previous.filter(
+            (conversation) =>
+              conversation.id !== message.conversationId,
+          ),
+        ];
+      });
+    };
+
+    socket.on("newMessage", handleNewMessage);
+
+    return () => {
+      socket.off("newMessage", handleNewMessage);
+    };
+  }, [currentConversationId, currentUser?.id]);
+
+  // ============================================================
+  // REAL-TIME READ RECEIPTS
+  // ============================================================
+
+  useEffect(() => {
+    const handleMessageRead = (
+      payload: MessageReadPayload,
+    ) => {
+      if (
+        !payload.conversationId ||
+        payload.messageIds.length === 0
+      ) {
+        return;
+      }
+
+      setConversations((previous) =>
+        previous.map((conversation) => {
+          if (
+            conversation.id !== payload.conversationId
+          ) {
+            return conversation;
+          }
+
+          return {
+            ...conversation,
+            unreadCount: 0,
+            messages: conversation.messages.map(
+              (message) =>
+                payload.messageIds.includes(message.id)
+                  ? {
+                      ...message,
+                      readAt: payload.readAt,
+                    }
+                  : message,
+            ),
+          };
+        }),
+      );
+    };
+
+    socket.on("message:read", handleMessageRead);
+
+    return () => {
+      socket.off("message:read", handleMessageRead);
+    };
+  }, []);
+
+  // ============================================================
+  // HELPERS
+  // ============================================================
+
+  const getOtherUser = (
+    conversation: Conversation,
+  ): ChatUser | undefined => {
+    return conversation.members.find(
+      (member) =>
+        member.user.id !== currentUser?.id,
+    )?.user;
+  };
+
+  const markConversationRead = async (
+    conversationId: string,
+  ) => {
+    if (!token) return;
+
+    try {
+      await fetch(
+        `${import.meta.env.VITE_API_URL}/conversations/${conversationId}/read`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        },
+      );
+    } catch (error) {
+      console.error(
+        "Mark conversation read error:",
+        error,
+      );
+    }
+  };
+
+  // ============================================================
+  // SELECT CONVERSATION
+  // ============================================================
+
+  const handleSelectConversation = async (
+    conversation: Conversation,
+  ) => {
+    const updatedConversation: Conversation = {
+      ...conversation,
+      unreadCount: 0,
+    };
+
+    setConversations((previous) =>
+      previous.map((item) =>
+        item.id === conversation.id
+          ? updatedConversation
+          : item,
+      ),
+    );
+
+    onSelectConversation(updatedConversation);
+
+    await markConversationRead(conversation.id);
+  };
+
+  // ============================================================
+  // START CONVERSATION
+  // ============================================================
+
+  const handleStartChat = async (
+    user: ChatUser,
+  ) => {
+    if (!token || startingChat) return;
+
+    try {
+      setStartingChat(user.id);
+
+      const conversation = await createConversation(
+        token,
+        user.id,
+      );
+
+      const normalizedConversation: Conversation = {
+        ...conversation,
+        unreadCount: 0,
+        messages: conversation.messages ?? [],
+      };
+
+      setConversations((previous) => {
+        const existingIndex = previous.findIndex(
+          (item) =>
+            item.id === normalizedConversation.id,
+        );
+
+        if (existingIndex === -1) {
+          return [
+            normalizedConversation,
+            ...previous,
+          ];
+        }
+
+        return previous.map((item) =>
+          item.id === normalizedConversation.id
+            ? normalizedConversation
+            : item,
+        );
+      });
+
+      onSelectConversation(normalizedConversation);
+
+      await markConversationRead(
+        normalizedConversation.id,
+      );
+
+      setSearch("");
+    } catch (error) {
+      console.error(
+        "Start conversation error:",
+        error,
+      );
+    } finally {
+      setStartingChat(null);
+    }
+  };
+
+  // ============================================================
+  // SEARCH
+  // ============================================================
+
+  const filteredUsers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    if (!query) return [];
+
+    const existingUserIds = new Set<string>();
+
+    conversations.forEach((conversation) => {
+      const otherUser = getOtherUser(conversation);
+
+      if (otherUser) {
+        existingUserIds.add(otherUser.id);
+      }
+    });
+
+    return users
+      .filter(
+        (user) =>
+          user.id !== currentUser?.id &&
+          !existingUserIds.has(user.id),
+      )
+      .filter((user) => {
+        const username = user.username.toLowerCase();
+        const email = user.email.toLowerCase();
+
+        return (
+          username.includes(query) ||
+          email.includes(query)
+        );
+      })
+      .slice(0, 8);
+  }, [
+    conversations,
+    currentUser?.id,
+    search,
+    users,
+  ]);
+
+  // ============================================================
+  // LOADING
+  // ============================================================
+
+  if (loading) {
+    return (
+      <div className="rtc-conversation-list">
+        <div className="rtc-muted-row">
+          <span className="rtc-spinner" />
+          <span> Loading conversations...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // ============================================================
+  // UI
+  // ============================================================
+
+  return (
+    <div className="rtc-conversation-list">
+
+      {/* SEARCH */}
+
+      <div className="rtc-conversation-search">
+        <div className="relative">
+          <svg
+            className="rtc-search-icon"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            aria-hidden="true"
+          >
+            <circle cx="11" cy="11" r="7" />
+            <path d="m20 20-3.5-3.5" />
+          </svg>
+
+          <input
+            type="text"
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Search users..."
+            autoComplete="off"
+            className="rtc-search-input pl-10"
+          />
+
+          {search && (
+            <button
+              type="button"
+              onClick={() => setSearch("")}
+              aria-label="Clear search"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-lg text-white/40 hover:text-white"
+            >
+              ×
+            </button>
+          )}
+        </div>
+
+        {search.trim() && (
+          <div className="rtc-search-results">
+            {usersLoading ? (
+              <div className="rtc-muted-row">
+                <span className="rtc-spinner" />
+                <span>Searching...</span>
+              </div>
+            ) : filteredUsers.length === 0 ? (
+              <div className="rtc-muted-row">
+                No users found
+              </div>
+            ) : (
+              filteredUsers.map((user) => {
+                const isOnline =
+                  onlineUserIds.includes(user.id);
+
+                return (
+                  <div
+                    key={user.id}
+                    className="rtc-search-user"
+                  >
+                    <div className="relative shrink-0">
+                      <div className="rtc-avatar rtc-avatar-search">
+                        {user.username
+                          .slice(0, 2)
+                          .toUpperCase()}
+                      </div>
+
+                      <span
+                        className={`rtc-status-dot ${
+                          isOnline ? "is-online" : ""
+                        }`}
+                      />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <p className="rtc-user-name">
+                        {user.username}
+                      </p>
+
+                      <p className="rtc-user-email">
+                        {user.email}
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        handleStartChat(user)
+                      }
+                      disabled={startingChat !== null}
+                      className="rtc-small-button"
+                    >
+                      {startingChat === user.id
+                        ? "..."
+                        : "Chat"}
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* CONVERSATIONS */}
+
+      <div className="rtc-conversation-scroll">
+        {conversations.length === 0 ? (
+          <div className="rtc-no-conversations">
+            <div className="rtc-empty-small-icon">
+              💬
+            </div>
+
+            <p className="rtc-muted-title">
+              No conversations yet
+            </p>
+
+            <p className="rtc-muted-description">
+              Search for someone above to start chatting.
+            </p>
+          </div>
+        ) : (
+          <div>
+            {conversations.map((conversation) => {
+              const otherUser =
+                getOtherUser(conversation);
+
+              if (!otherUser) return null;
+
+              const lastMessage =
+                conversation.messages[0];
+
+              const isSelected =
+                conversation.id ===
+                currentConversationId;
+
+              const isOnline =
+                onlineUserIds.includes(
+                  otherUser.id,
+                );
+
+              const unreadCount =
+                conversation.unreadCount ?? 0;
+
+              return (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  onClick={() =>
+                    handleSelectConversation(
+                      conversation,
+                    )
+                  }
+                  className={`rtc-conversation-item ${
+                    isSelected
+                      ? "is-selected"
+                      : ""
+                  }`}
+                >
+                  {isSelected && (
+                    <span className="rtc-selection-indicator" />
+                  )}
+
+                  <div className="relative shrink-0">
+                    <div
+                      className={`rtc-avatar ${
+                        isSelected
+                          ? "is-selected"
+                          : ""
+                      }`}
+                    >
+                      {otherUser.username
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+
+                    <span
+                      className={`rtc-status-dot ${
+                        isOnline
+                          ? "is-online"
+                          : ""
+                      }`}
+                    />
+                  </div>
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`rtc-conversation-name ${
+                          isSelected
+                            ? "is-selected"
+                            : ""
+                        }`}
+                      >
+                        {otherUser.username}
+                      </span>
+
+                      {unreadCount > 0 && (
+                        <span className="rtc-count-badge">
+                          {unreadCount > 99
+                            ? "99+"
+                            : unreadCount}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <span
+                        className={`rtc-conversation-status ${
+                          isOnline
+                            ? "is-online"
+                            : ""
+                        }`}
+                      >
+                        {isOnline
+                          ? "Online"
+                          : "Offline"}
+                      </span>
+
+                      <span className="rtc-separator">
+                        •
+                      </span>
+
+                      <p className="rtc-last-message">
+                        {lastMessage?.text ||
+                          "No messages yet"}
+                      </p>
+                    </div>
+                  </div>
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+===== FILE: src/features/chat/Message.tsx =====
+
+
+
+===== FILE: src/features/chat/MessageInput.tsx =====
+
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "../auth/authStore";
+import { useChatStore } from "./chatStore";
+import { socket } from "../../services/socket";
+
+type Theme = "dark" | "light";
+
+type MessageInputProps = {
+  onSend: (message: string) => void;
+  theme?: Theme;
+};
+
+export default function MessageInput({
+  onSend,
+  theme = "dark",
+}: MessageInputProps) {
+  const [message, setMessage] = useState("");
+
+  const token = useAuthStore((state) => state.token);
+  const currentUser = useAuthStore((state) => state.user);
+
+  const conversationId = useChatStore(
+    (state) => state.currentConversationId,
+  );
+
+  const typingTimeout = useRef<ReturnType<typeof setTimeout> | null>(
+    null,
+  );
+  const isTypingRef = useRef(false);
+
+  const stopTyping = () => {
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current);
+      typingTimeout.current = null;
+    }
+
+    if (
+      !conversationId ||
+      !currentUser ||
+      !isTypingRef.current
+    ) {
+      return;
+    }
+
+    socket.emit("stopTyping", {
+      conversationId,
+      userId: currentUser.id,
+    });
+
+    isTypingRef.current = false;
+  };
+
+  const handleChange = (value: string) => {
+    setMessage(value);
+
+    if (!conversationId || !currentUser || !token) {
+      return;
+    }
+
+    if (!value.trim()) {
+      stopTyping();
+      return;
+    }
+
+    if (!isTypingRef.current) {
+      socket.emit("typing", {
+        conversationId,
+        userId: currentUser.id,
+        username: currentUser.username,
+      });
+
+      isTypingRef.current = true;
+    }
+
+    if (typingTimeout.current) {
+      clearTimeout(typingTimeout.current);
+    }
+
+    typingTimeout.current = setTimeout(stopTyping, 1200);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+
+    const trimmedMessage = message.trim();
+
+    if (!trimmedMessage) return;
+
+    onSend(trimmedMessage);
+    setMessage("");
+    stopTyping();
+  };
+
+  useEffect(() => {
+    isTypingRef.current = false;
+
+    return () => {
+      stopTyping();
+    };
+  }, [conversationId, currentUser]);
+
+  return (
+    <form
+      data-theme={theme}
+      className="rtc-message-input"
+      onSubmit={handleSubmit}
+    >
+      <input
+        type="text"
+        value={message}
+        onChange={(e) => handleChange(e.target.value)}
+        onBlur={stopTyping}
+        placeholder="Message..."
+        autoComplete="off"
+      />
+
+      <button
+        type="submit"
+        disabled={!message.trim()}
+        aria-label="Send message"
+      >
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-4 w-4"
+        >
+          <path d="M22 2 11 13" />
+          <path d="m22 2-7 20-4-9-9-4Z" />
+        </svg>
+      </button>
+    </form>
+  );
+}
+
+===== FILE: src/features/chat/TypingIndicator.tsx =====
+
+type TypingIndicatorProps = {
+  username: string;
+};
+
+export default function TypingIndicator({ username }: TypingIndicatorProps) {
+  return (
+    <div
+      style={{
+        padding: "5px 20px 10px",
+        color: "#666",
+        fontSize: "14px",
+      }}
+    >
+      <span>{username} is typing</span>
+      <span style={{ marginLeft: "4px" }}>●</span>
+      <span>●</span>
+      <span>●</span>
+    </div>
+  );
+}
+
+
+===== FILE: src/features/presence/presenceStore.ts =====
+
+import { create } from "zustand";
+import { socket } from "../../services/socket";
+
+type PresenceState = {
+  onlineUserIds: string[];
+  setOnlineUserIds: (userIds: string[]) => void;
+  setUserOnline: (userId: string) => void;
+  setUserOffline: (userId: string) => void;
+  clearPresence: () => void;
+};
+
+const normalizeUserIds = (userIds: string[]) => Array.from(new Set(userIds));
+
+export const usePresenceStore = create<PresenceState>((set) => ({
+  onlineUserIds: [],
+
+  setOnlineUserIds: (userIds) => {
+    set({
+      onlineUserIds: normalizeUserIds(userIds),
+    });
+  },
+
+  setUserOnline: (userId) => {
+    set((state) => ({
+      onlineUserIds: state.onlineUserIds.includes(userId)
+        ? state.onlineUserIds
+        : [...state.onlineUserIds, userId],
+    }));
+  },
+
+  setUserOffline: (userId) => {
+    set((state) => ({
+      onlineUserIds: state.onlineUserIds.filter((id) => id !== userId),
+    }));
+  },
+
+  clearPresence: () => {
+    set({
+      onlineUserIds: [],
+    });
+  },
+}));
+
+let listenersAttached = false;
+
+const attachPresenceListeners = () => {
+  if (listenersAttached) {
+    return;
+  }
+
+  socket.on("presence:state", ({ onlineUserIds }: { onlineUserIds: string[] }) => {
+    usePresenceStore.getState().setOnlineUserIds(onlineUserIds);
+  });
+
+  socket.on("presence:online", ({ userId }: { userId: string }) => {
+    usePresenceStore.getState().setUserOnline(userId);
+  });
+
+  socket.on("presence:offline", ({ userId }: { userId: string }) => {
+    usePresenceStore.getState().setUserOffline(userId);
+  });
+
+  // Legacy compatibility while the rest of the app is being updated.
+  socket.on("onlineUsers", ({ userIds }: { userIds: string[] }) => {
+    usePresenceStore.getState().setOnlineUserIds(userIds);
+  });
+
+  socket.on("userOnline", ({ userId }: { userId: string }) => {
+    usePresenceStore.getState().setUserOnline(userId);
+  });
+
+  socket.on("userOffline", ({ userId }: { userId: string }) => {
+    usePresenceStore.getState().setUserOffline(userId);
+  });
+
+  listenersAttached = true;
+};
+
+attachPresenceListeners();
+
+
+===== FILE: src/services/api.ts =====
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:5000";
+
+export default API_URL;
+
+export async function getUsers(token: string) {
+  const response = await fetch(`${API_URL}/users`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch users");
+  }
+
+  return data.users;
+}
+
+export async function loginUser(email: string, password: string) {
+  const response = await fetch(`${API_URL}/auth/login`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      email,
+      password,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Login failed");
+  }
+
+  return data;
+}
+
+export async function registerUser(
+  username: string,
+  email: string,
+  password: string,
+) {
+  const response = await fetch(`${API_URL}/auth/register`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      username,
+      email,
+      password,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Registration failed");
+  }
+
+  return data;
+}
+export async function createConversation(token: string, userId: string) {
+  const response = await fetch(`${API_URL}/conversations`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      userId,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to create conversation");
+  }
+
+  return data.conversation;
+}
+
+export type RelationshipStatus =
+  | "SELF"
+  | "FRIENDS"
+  | "REQUEST_SENT"
+  | "REQUEST_RECEIVED"
+  | "NOT_FRIENDS";
+
+export type SocialUser = {
+  id: string;
+  username: string;
+  email: string;
+  relationship: RelationshipStatus;
+  friendRequestId?: string;
+  friendshipId?: string;
+};
+
+export type Friend = {
+  id: string;
+  username: string;
+  email: string;
+};
+
+export type FriendRequest = {
+  id: string;
+  senderId: string;
+  receiverId: string;
+  createdAt: string;
+  sender: Friend;
+  receiver: Friend;
+};
+
+export async function searchUsers(token: string, query: string) {
+  const url = new URL(`${API_URL}/users/search`);
+  if (query.trim()) {
+    url.searchParams.set("q", query.trim());
+  }
+
+  const response = await fetch(url.toString(), {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to search users");
+  }
+
+  return data.users as SocialUser[];
+}
+
+export async function getFriends(token: string) {
+  const response = await fetch(`${API_URL}/friends`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch friends");
+  }
+
+  return data.friends as Friend[];
+}
+
+export async function getFriendRequests(token: string) {
+  const response = await fetch(`${API_URL}/friends/requests`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch friend requests");
+  }
+
+  return data.requests as FriendRequest[];
+}
+
+export async function sendFriendRequest(token: string, receiverId: string) {
+  const response = await fetch(`${API_URL}/friends/requests`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({
+      receiverId,
+    }),
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to send friend request");
+  }
+
+  return data;
+}
+
+export async function acceptFriendRequest(token: string, requestId: string) {
+  const response = await fetch(
+    `${API_URL}/friends/requests/${requestId}/accept`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to accept friend request");
+  }
+
+  return data;
+}
+
+export async function rejectFriendRequest(token: string, requestId: string) {
+  const response = await fetch(
+    `${API_URL}/friends/requests/${requestId}/reject`,
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    },
+  );
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to reject friend request");
+  }
+
+  return data;
+}
+
+export async function removeFriend(token: string, friendId: string) {
+  const response = await fetch(`${API_URL}/friends/${friendId}`, {
+    method: "DELETE",
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to remove friend");
+  }
+
+  return data;
+}
+
+
+===== FILE: src/services/socket.ts =====
+
+import { io, Socket } from "socket.io-client";
+
+const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+
+export const socket: Socket = io(SOCKET_URL, {
+  autoConnect: false,
+  transports: ["websocket"],
+});
+
+export function connectSocket(token: string) {
+  socket.auth = {
+    token,
+  };
+
+  if (!socket.connected) {
+    socket.connect();
+  }
+}
+
+export function disconnectSocket() {
+  if (socket.connected) {
+    socket.disconnect();
+  }
+}
+
+
+===== FILE: src/types/conversation.ts =====
+
+
+
+===== FILE: src/types/message.ts =====
+
+
+
+===== FILE: src/types/user.ts =====
+
+
