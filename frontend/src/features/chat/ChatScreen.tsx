@@ -532,7 +532,7 @@ export default function ChatScreen() {
             }
             className="rtc-header-button rtc-theme-button"
           >
-            <span className="text-base leading-none">{isDark ? "☀" : "☾"}</span>
+            <span className="rtc-theme-icon">{isDark ? "☀" : "☾"}</span>
 
             <span className="rtc-theme-button-text">
               {isDark ? "Light" : "Dark"}
