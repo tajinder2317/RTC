@@ -36,7 +36,6 @@ export default function ChatScreen() {
   const messages = useChatStore((state) => state.messages);
 
   const setConversation = useChatStore((state) => state.setConversation);
-
   const setMessages = useChatStore((state) => state.setMessages);
 
   const [users, setUsers] = useState<User[]>([]);
@@ -54,12 +53,6 @@ export default function ChatScreen() {
     return localStorage.getItem("rtc-theme") === "light" ? "light" : "dark";
   });
 
-  /*
-   * =========================================================
-   * MOBILE NAVIGATION
-   * =========================================================
-   */
-
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
 
   const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
@@ -71,12 +64,6 @@ export default function ChatScreen() {
   );
 
   const lastReadReceiptSignatureRef = useRef<string | null>(null);
-
-  /*
-   * =========================================================
-   * DERIVED DATA
-   * =========================================================
-   */
 
   const unreadIncomingMessageIds = messages
     .filter(
@@ -92,10 +79,6 @@ export default function ChatScreen() {
       ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
       : null;
 
-  /*
-   * Keep your temporary restriction:
-   * only show dhillon2317 in Quick Chat.
-   */
   const startChatUsers = users.filter(
     (user) => user.username === "dhillon2317" && user.id !== currentUser?.id,
   );
@@ -116,24 +99,26 @@ export default function ChatScreen() {
 
   const isDark = theme === "dark";
 
-  /*
-   * =========================================================
-   * THEME
-   * =========================================================
-   */
+  /* =========================================================
+     THEME
+     ========================================================= */
 
   useEffect(() => {
     localStorage.setItem("rtc-theme", theme);
   }, [theme]);
 
-  /*
-   * =========================================================
-   * LOAD USERS
-   * =========================================================
-   */
+  /* =========================================================
+     LOAD USERS
+     ========================================================= */
 
   useEffect(() => {
-    if (!token) return;
+    if (!token) {
+      setUsers([]);
+      setLoadingUsers(false);
+      return;
+    }
+
+    let cancelled = false;
 
     const fetchUsers = async () => {
       try {
@@ -151,22 +136,32 @@ export default function ChatScreen() {
           throw new Error(data.message || "Failed to fetch users");
         }
 
-        setUsers(data.users);
+        if (!cancelled) {
+          setUsers(Array.isArray(data.users) ? data.users : []);
+        }
       } catch (error) {
         console.error("Fetch users error:", error);
+
+        if (!cancelled) {
+          setUsers([]);
+        }
       } finally {
-        setLoadingUsers(false);
+        if (!cancelled) {
+          setLoadingUsers(false);
+        }
       }
     };
 
     void fetchUsers();
+
+    return () => {
+      cancelled = true;
+    };
   }, [token]);
 
-  /*
-   * =========================================================
-   * FRIEND REQUEST COUNT
-   * =========================================================
-   */
+  /* =========================================================
+     FRIEND REQUEST COUNT
+     ========================================================= */
 
   useEffect(() => {
     if (!token) {
@@ -201,11 +196,9 @@ export default function ChatScreen() {
     };
   }, [token]);
 
-  /*
-   * =========================================================
-   * LOAD MESSAGES
-   * =========================================================
-   */
+  /* =========================================================
+     LOAD MESSAGES
+     ========================================================= */
 
   useEffect(() => {
     if (!token || !currentConversationId) {
@@ -237,11 +230,16 @@ export default function ChatScreen() {
 
         const existingMessages = useChatStore.getState().messages;
 
+        const fetchedMessages = Array.isArray(data.messages)
+          ? data.messages
+          : [];
+
         const mergedMessages = [
-          ...data.messages,
+          ...fetchedMessages,
           ...existingMessages.filter(
             (existingMessage) =>
-              !data.messages.some(
+              existingMessage.conversationId === currentConversationId &&
+              !fetchedMessages.some(
                 (message: { id: string }) => message.id === existingMessage.id,
               ),
           ),
@@ -252,7 +250,9 @@ export default function ChatScreen() {
 
         setMessages(mergedMessages);
       } catch (error) {
-        console.error("Load messages error:", error);
+        if (!cancelled) {
+          console.error("Load messages error:", error);
+        }
       }
     };
 
@@ -263,11 +263,9 @@ export default function ChatScreen() {
     };
   }, [currentConversationId, setMessages, token]);
 
-  /*
-   * =========================================================
-   * READ RECEIPTS
-   * =========================================================
-   */
+  /* =========================================================
+     READ RECEIPTS
+     ========================================================= */
 
   useEffect(() => {
     if (readReceiptTimerRef.current) {
@@ -295,6 +293,8 @@ export default function ChatScreen() {
       socket.emit("conversation:read", {
         conversationId: currentConversationId,
       });
+
+      readReceiptTimerRef.current = null;
     }, 100);
 
     return () => {
@@ -305,11 +305,9 @@ export default function ChatScreen() {
     };
   }, [currentConversationId, currentUser?.id, token, unreadIncomingSignature]);
 
-  /*
-   * =========================================================
-   * TYPING INDICATOR
-   * =========================================================
-   */
+  /* =========================================================
+     TYPING INDICATOR
+     ========================================================= */
 
   useEffect(() => {
     if (!currentConversationId) {
@@ -360,11 +358,9 @@ export default function ChatScreen() {
     };
   }, [currentConversationId, currentUser?.id]);
 
-  /*
-   * =========================================================
-   * AUTO SCROLL
-   * =========================================================
-   */
+  /* =========================================================
+     AUTO SCROLL
+     ========================================================= */
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({
@@ -373,13 +369,11 @@ export default function ChatScreen() {
     });
   }, [messages]);
 
-  /*
-   * =========================================================
-   * OPEN CONVERSATION
-   * =========================================================
-   */
+  /* =========================================================
+     OPEN CONVERSATION
+     ========================================================= */
 
-  const openConversation = async (conversation: {
+  const openConversation = (conversation: {
     id: string;
     createdAt: string;
     unreadCount?: number;
@@ -396,32 +390,24 @@ export default function ChatScreen() {
       readAt?: string | null;
     }[];
   }) => {
-    setConversation(conversation);
+    setMessages([]);
 
-    /*
-     * This is the important mobile fix.
-     *
-     * ConversationList opens the chat panel instead
-     * of leaving it off-screen.
-     */
+    setConversation({
+      ...conversation,
+      unreadCount: 0,
+      messages: conversation.messages ?? [],
+    });
+
     setMobileChatOpen(true);
   };
-
-  /*
-   * =========================================================
-   * MOBILE BACK
-   * =========================================================
-   */
 
   const closeMobileChat = () => {
     setMobileChatOpen(false);
   };
 
-  /*
-   * =========================================================
-   * START CONVERSATION
-   * =========================================================
-   */
+  /* =========================================================
+     START CONVERSATION
+     ========================================================= */
 
   const startConversation = async (user: User) => {
     if (!token || creatingConversation) return;
@@ -449,6 +435,10 @@ export default function ChatScreen() {
         throw new Error(data.message || "Failed to create conversation");
       }
 
+      if (!data.conversation) {
+        throw new Error("Server returned no conversation");
+      }
+
       await openConversation(data.conversation);
     } catch (error) {
       console.error("Start conversation error:", error);
@@ -457,28 +447,26 @@ export default function ChatScreen() {
     }
   };
 
-  /*
-   * =========================================================
-   * SEND MESSAGE
-   * =========================================================
-   */
+  /* =========================================================
+     SEND MESSAGE
+     ========================================================= */
 
   const sendMessage = (text: string) => {
-    if (!currentConversationId || !currentUser) {
+    const trimmedText = text.trim();
+
+    if (!currentConversationId || !currentUser || !trimmedText) {
       return;
     }
 
     socket.emit("sendMessage", {
       conversationId: currentConversationId,
-      text,
+      text: trimmedText,
     });
   };
 
-  /*
-   * =========================================================
-   * RENDER
-   * =========================================================
-   */
+  /* =========================================================
+     RENDER
+     ========================================================= */
 
   return (
     <div
@@ -487,15 +475,13 @@ export default function ChatScreen() {
         isDark ? "rtc-theme-dark" : "rtc-theme-light"
       }`}
     >
-      {/* =====================================================
-          HEADER
-          ===================================================== */}
+      {/* HEADER */}
 
       <header className="rtc-header">
         <div className="flex min-w-0 items-center gap-3">
           <div className="rtc-brand-mark">RT</div>
 
-          <div>
+          <div className="min-w-0">
             <h1 className="rtc-header-title">Real-Time Chat</h1>
 
             <p className="rtc-header-subtitle">Connected conversations</p>
@@ -503,6 +489,40 @@ export default function ChatScreen() {
         </div>
 
         <div className="rtc-header-actions">
+          {/* ADD FRIENDS */}
+          <button
+            type="button"
+            onClick={() => navigate("/friends")}
+            className="rtc-header-button rtc-friends-button"
+            aria-label="Friends"
+            title="Friends"
+          >
+            <svg
+              className="rtc-friends-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
+              <circle cx="8.5" cy="7" r="4" />
+              <path d="M18 8v6" />
+              <path d="M21 11h-6" />
+            </svg>
+
+            <span className="rtc-friends-button-text">Friends</span>
+
+            {friendRequestCount > 0 && (
+              <span className="rtc-count-badge">
+                {friendRequestCount > 99 ? "99+" : friendRequestCount}
+              </span>
+            )}
+          </button>
+
+          {/* THEME */}
           <button
             type="button"
             aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
@@ -518,32 +538,14 @@ export default function ChatScreen() {
               {isDark ? "Light" : "Dark"}
             </span>
           </button>
-
-          <button
-            type="button"
-            onClick={() => navigate("/friends")}
-            className="rtc-header-button rtc-friends-button"
-          >
-            <span className="rtc-friends-button-text">Friends</span>
-
-            {friendRequestCount > 0 && (
-              <span className="rtc-count-badge">
-                {friendRequestCount > 99 ? "99+" : friendRequestCount}
-              </span>
-            )}
-          </button>
         </div>
       </header>
 
-      {/* =====================================================
-          MAIN
-          ===================================================== */}
+      {/* MAIN */}
 
       <main className="rtc-main">
         <div className="rtc-chat-frame">
-          {/* =================================================
-              SIDEBAR
-              ================================================= */}
+          {/* SIDEBAR */}
 
           <aside
             className={`rtc-sidebar ${
@@ -620,9 +622,7 @@ export default function ChatScreen() {
             </div>
           </aside>
 
-          {/* =================================================
-              CHAT PANEL
-              ================================================= */}
+          {/* CHAT PANEL */}
 
           <section
             className={`rtc-chat-panel ${
@@ -647,8 +647,6 @@ export default function ChatScreen() {
                 {/* CHAT HEADER */}
 
                 <div className="rtc-chat-header">
-                  {/* MOBILE BACK BUTTON */}
-
                   <button
                     type="button"
                     className="rtc-mobile-back"
@@ -685,9 +683,9 @@ export default function ChatScreen() {
                   </div>
                 </div>
 
-                {/* MESSAGE AREA */}
+                {/* MESSAGES */}
 
-                <div className="rtc-messages rtc-scrollbar">
+                <div className="rtc-messages">
                   {messages.length === 0 ? (
                     <div className="flex h-full items-center justify-center">
                       <div className="text-center">
@@ -710,11 +708,15 @@ export default function ChatScreen() {
                         const isLatestOutgoingMessage =
                           isMine && message.id === latestOutgoingMessageId;
 
-                        const messageStatus = message.readAt
-                          ? "✓✓"
-                          : message.deliveredAt
-                            ? "✓✓"
-                            : "✓";
+                        let messageStatus = "✓";
+
+                        if (message.deliveredAt) {
+                          messageStatus = "✓✓";
+                        }
+
+                        if (message.readAt) {
+                          messageStatus = "✓✓";
+                        }
 
                         return (
                           <div
