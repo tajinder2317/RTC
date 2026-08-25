@@ -411,7 +411,7 @@ export default function ConversationList({
       <div className="rtc-conversation-list">
         <div className="rtc-muted-row">
           <span className="rtc-spinner" />
-          <span> Loading conversations...</span>
+          <span>Loading conversations...</span>
         </div>
       </div>
     );
