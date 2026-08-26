@@ -1,7 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
 
-import MessageBubble from "./MessageBubble";
-
 type Theme = "dark" | "light";
 
 type Message = {
@@ -20,52 +18,184 @@ type ChatMessagesProps = {
   theme?: Theme;
 };
 
-/*
- * =========================================================
- * DATE HELPERS
- * =========================================================
- */
+/* =========================================================
+   DATE HELPERS
+   ========================================================= */
 
-function isSameDay(first: Date, second: Date) {
-  return (
-    first.getFullYear() === second.getFullYear() &&
-    first.getMonth() === second.getMonth() &&
-    first.getDate() === second.getDate()
-  );
+function getDayKey(date: Date | string) {
+  const value = date instanceof Date ? date : new Date(date);
+
+  return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(
+    2,
+    "0",
+  )}-${String(value.getDate()).padStart(2, "0")}`;
 }
 
-function getDayLabel(dateString: string): string {
+function getDayLabel(dateString: string) {
   const date = new Date(dateString);
 
-  const today = new Date();
+  const now = new Date();
 
-  const yesterday = new Date();
-  yesterday.setDate(today.getDate() - 1);
+  const todayKey = getDayKey(now);
 
-  if (isSameDay(date, today)) {
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+
+  const yesterdayKey = getDayKey(yesterday);
+
+  const messageKey = getDayKey(date);
+
+  if (messageKey === todayKey) {
     return "Today";
   }
 
-  if (isSameDay(date, yesterday)) {
+  if (messageKey === yesterdayKey) {
     return "Yesterday";
   }
 
-  return date.toLocaleDateString([], {
-    weekday: "long",
+  return date.toLocaleDateString(undefined, {
     day: "numeric",
     month: "long",
-    year:
-      date.getFullYear() === today.getFullYear()
-        ? undefined
-        : "numeric",
+    year: "numeric",
   });
 }
 
-/*
- * =========================================================
- * COMPONENT
- * =========================================================
- */
+/* =========================================================
+   TIME FORMAT
+   ========================================================= */
+
+function formatMessageTime(dateString: string) {
+  const date = new Date(dateString);
+
+  return date.toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+}
+
+/* =========================================================
+   MESSAGE BUBBLE
+   ========================================================= */
+
+type MessageBubbleProps = {
+  text: string;
+  createdAt: string;
+  isMine: boolean;
+  isLatestOutgoingMessage: boolean;
+  deliveredAt?: string | null;
+  readAt?: string | null;
+  theme: Theme;
+};
+
+function MessageBubble({
+  text,
+  createdAt,
+  isMine,
+  isLatestOutgoingMessage,
+  deliveredAt,
+  readAt,
+  theme,
+}: MessageBubbleProps) {
+  const isDark = theme === "dark";
+
+  /*
+   * Message status
+   *
+   * ✓   = sent
+   * ✓✓  = delivered
+   * ✓✓  = read
+   */
+
+  let messageStatus = "✓";
+
+  if (deliveredAt) {
+    messageStatus = "✓✓";
+  }
+
+  if (readAt) {
+    messageStatus = "✓✓";
+  }
+
+  return (
+    <div className={`flex w-full ${isMine ? "justify-end" : "justify-start"}`}>
+      <div
+        className={[
+          "relative",
+          "max-w-[82%]",
+          "rounded-2xl",
+          "px-3.5 py-2.5",
+          "text-sm",
+          "leading-5",
+          "shadow-sm",
+          "backdrop-blur-xl",
+          "sm:max-w-[70%]",
+          "transition-colors",
+          isMine
+            ? [
+                "rounded-br-md",
+                isDark
+                  ? "border border-white/[0.10] bg-white/[0.075] text-white"
+                  : "border border-black/[0.08] bg-black/[0.045] text-black",
+              ].join(" ")
+            : [
+                "rounded-bl-md",
+                isDark
+                  ? "border border-white/[0.08] bg-white/[0.055] text-white"
+                  : "border border-black/[0.07] bg-black/[0.035] text-black",
+              ].join(" "),
+        ].join(" ")}
+      >
+        {/* MESSAGE + TIME */}
+
+        <div className="flex items-end gap-2">
+          <p className="min-w-0 whitespace-pre-wrap break-words">{text}</p>
+
+          {/* TIME */}
+
+          <span
+            className={[
+              "mb-[1px]",
+              "shrink-0",
+              "whitespace-nowrap",
+              "text-[9px]",
+              "leading-none",
+              isDark ? "text-white/35" : "text-black/35",
+            ].join(" ")}
+          >
+            {formatMessageTime(createdAt)}
+          </span>
+
+          {/* STATUS */}
+
+          {isMine && isLatestOutgoingMessage && (
+            <span
+              aria-label={readAt ? "Read" : deliveredAt ? "Delivered" : "Sent"}
+              className={[
+                "mb-[1px]",
+                "shrink-0",
+                "text-[11px]",
+                "font-semibold",
+                "leading-none",
+                "tracking-[-2px]",
+                readAt
+                  ? "text-[#53bdeb]"
+                  : isDark
+                    ? "text-white/45"
+                    : "text-black/40",
+              ].join(" ")}
+            >
+              {messageStatus}
+            </span>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   CHAT MESSAGES
+   ========================================================= */
 
 export default function ChatMessages({
   messages,
@@ -74,13 +204,7 @@ export default function ChatMessages({
 }: ChatMessagesProps) {
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
-  const isDark = theme === "dark";
-
   /*
-   * =========================================================
-   * LATEST OUTGOING MESSAGE
-   * =========================================================
-   *
    * Only the newest outgoing message receives
    * delivery/read status.
    */
@@ -89,16 +213,12 @@ export default function ChatMessages({
     return (
       [...messages]
         .reverse()
-        .find(
-          (message) => message.senderId === currentUserId,
-        )?.id ?? null
+        .find((message) => message.senderId === currentUserId)?.id ?? null
     );
   }, [messages, currentUserId]);
 
   /*
-   * =========================================================
-   * AUTO SCROLL
-   * =========================================================
+   * Auto-scroll whenever messages change.
    */
 
   useEffect(() => {
@@ -108,25 +228,19 @@ export default function ChatMessages({
     });
   }, [messages]);
 
-  /*
-   * =========================================================
-   * EMPTY STATE
-   * =========================================================
-   */
+  /* =========================================================
+     EMPTY STATE
+     ========================================================= */
 
   if (messages.length === 0) {
     return (
-      <div
-        className={`flex h-full min-h-0 items-center justify-center px-6 py-8 ${
-          isDark ? "text-white" : "text-black"
-        }`}
-      >
+      <div className="flex h-full min-h-0 items-center justify-center px-6 py-8">
         <div className="max-w-xs text-center">
           <div
-            className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-lg ${
-              isDark
-                ? "border border-white/[0.06] bg-white/[0.04]"
-                : "border border-black/[0.06] bg-black/[0.035]"
+            className={`mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl border text-lg backdrop-blur-xl ${
+              theme === "dark"
+                ? "border-white/[0.07] bg-white/[0.04]"
+                : "border-black/[0.07] bg-black/[0.035]"
             }`}
           >
             💬
@@ -134,7 +248,7 @@ export default function ChatMessages({
 
           <p
             className={`text-sm font-medium ${
-              isDark ? "text-white" : "text-black"
+              theme === "dark" ? "text-white" : "text-black"
             }`}
           >
             No messages yet
@@ -142,7 +256,7 @@ export default function ChatMessages({
 
           <p
             className={`mt-1 text-xs ${
-              isDark ? "text-white/40" : "text-black/40"
+              theme === "dark" ? "text-white/40" : "text-black/40"
             }`}
           >
             Say hello and start the conversation.
@@ -152,87 +266,68 @@ export default function ChatMessages({
     );
   }
 
-  /*
-   * =========================================================
-   * MESSAGES
-   * =========================================================
-   */
+  /* =========================================================
+     MESSAGES
+     ========================================================= */
 
   return (
-    <div className="mx-auto flex w-full max-w-4xl flex-col px-3 py-5 sm:px-6">
+    <div className="mx-auto flex w-full max-w-4xl flex-col gap-2.5 px-3 py-5 sm:px-6">
       {messages.map((message, index) => {
-        const previousMessage = messages[index - 1];
-
-        const currentDate = new Date(message.createdAt);
-
-        const previousDate = previousMessage
-          ? new Date(previousMessage.createdAt)
-          : null;
-
-        const shouldShowDayDivider =
-          !previousDate ||
-          !isSameDay(currentDate, previousDate);
-
         const isMine = message.senderId === currentUserId;
 
         const isLatestOutgoingMessage =
-          isMine &&
-          message.id === latestOutgoingMessageId;
+          isMine && message.id === latestOutgoingMessageId;
+
+        const previousMessage = messages[index - 1];
+
+        const currentDayKey = getDayKey(message.createdAt);
+
+        const previousDayKey = previousMessage
+          ? getDayKey(previousMessage.createdAt)
+          : null;
+
+        const showDayDivider = currentDayKey !== previousDayKey;
 
         return (
-          <div key={message.id}>
-            {/* DAY DIVIDER */}
+          <div key={message.id} className="contents">
+            {/* =================================================
+                DAY DIVIDER
+                ================================================= */}
 
-            {shouldShowDayDivider && (
-              <div className="my-5 flex items-center gap-3">
+            {showDayDivider && (
+              <div className="my-3 flex items-center justify-center">
                 <div
-                  className={`h-px flex-1 ${
-                    isDark
-                      ? "bg-white/[0.06]"
-                      : "bg-black/[0.06]"
-                  }`}
-                />
-
-                <span
-                  className={`shrink-0 rounded-full border px-3 py-1 text-[9px] font-medium tracking-wide ${
-                    isDark
-                      ? "border-white/[0.07] bg-white/[0.035] text-white/35"
-                      : "border-black/[0.07] bg-black/[0.025] text-black/40"
+                  className={`rounded-full border px-3 py-1 text-[10px] font-medium shadow-sm backdrop-blur-xl ${
+                    theme === "dark"
+                      ? "border-white/[0.08] bg-white/[0.045] text-white/40"
+                      : "border-black/[0.07] bg-black/[0.035] text-black/40"
                   }`}
                 >
                   {getDayLabel(message.createdAt)}
-                </span>
-
-                <div
-                  className={`h-px flex-1 ${
-                    isDark
-                      ? "bg-white/[0.06]"
-                      : "bg-black/[0.06]"
-                  }`}
-                />
+                </div>
               </div>
             )}
 
-            {/* MESSAGE */}
+            {/* =================================================
+                MESSAGE
+                ================================================= */}
 
-            <div className="mb-2.5">
-              <MessageBubble
-                text={message.text}
-                isMine={isMine}
-                isLatestOutgoingMessage={
-                  isLatestOutgoingMessage
-                }
-                deliveredAt={message.deliveredAt}
-                readAt={message.readAt}
-                createdAt={message.createdAt}
-                theme={theme}
-              />
-            </div>
+            <MessageBubble
+              text={message.text}
+              createdAt={message.createdAt}
+              isMine={isMine}
+              isLatestOutgoingMessage={isLatestOutgoingMessage}
+              deliveredAt={message.deliveredAt}
+              readAt={message.readAt}
+              theme={theme}
+            />
           </div>
         );
       })}
 
-      {/* AUTO-SCROLL ANCHOR */}
+      {/* =====================================================
+          AUTO-SCROLL ANCHOR
+          ===================================================== */}
 
       <div
         ref={messagesEndRef}

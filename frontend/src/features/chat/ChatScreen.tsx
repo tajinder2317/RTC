@@ -51,7 +51,9 @@ export default function ChatScreen() {
   } | null>(null);
 
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    return localStorage.getItem("rtc-theme") === "light" ? "light" : "dark";
+    return localStorage.getItem("rtc-theme") === "light"
+      ? "light"
+      : "dark";
   });
 
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
@@ -121,11 +123,14 @@ export default function ChatScreen() {
       try {
         setLoadingUsers(true);
 
-        const response = await fetch(`${import.meta.env.VITE_API_URL}/users`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
+        const response = await fetch(
+          `${import.meta.env.VITE_API_URL}/users`,
+          {
+            headers: {
+              Authorization: `Bearer ${token}`,
+            },
           },
-        });
+        );
 
         const data = await response.json();
 
@@ -237,12 +242,14 @@ export default function ChatScreen() {
             (existingMessage) =>
               existingMessage.conversationId === currentConversationId &&
               !fetchedMessages.some(
-                (message: { id: string }) => message.id === existingMessage.id,
+                (message: { id: string }) =>
+                  message.id === existingMessage.id,
               ),
           ),
         ].sort(
           (a, b) =>
-            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
+            new Date(a.createdAt).getTime() -
+            new Date(b.createdAt).getTime(),
         );
 
         setMessages(mergedMessages);
@@ -280,7 +287,9 @@ export default function ChatScreen() {
       return;
     }
 
-    if (lastReadReceiptSignatureRef.current === unreadIncomingSignature) {
+    if (
+      lastReadReceiptSignatureRef.current === unreadIncomingSignature
+    ) {
       return;
     }
 
@@ -300,7 +309,12 @@ export default function ChatScreen() {
         readReceiptTimerRef.current = null;
       }
     };
-  }, [currentConversationId, currentUser?.id, token, unreadIncomingSignature]);
+  }, [
+    currentConversationId,
+    currentUser?.id,
+    token,
+    unreadIncomingSignature,
+  ]);
 
   /* =========================================================
      TYPING INDICATOR
@@ -419,7 +433,9 @@ export default function ChatScreen() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || "Failed to create conversation");
+        throw new Error(
+          data.message || "Failed to create conversation",
+        );
       }
 
       if (!data.conversation) {
@@ -458,22 +474,26 @@ export default function ChatScreen() {
   return (
     <div
       className={`h-[100dvh] w-full overflow-hidden transition-colors duration-200 ${
-        isDark ? "bg-[#070707] text-white" : "bg-[#f5f7fa] text-[#111827]"
+        isDark
+          ? "bg-[#070707] text-white"
+          : "bg-[#f3f4f6] text-[#111827]"
       }`}
     >
       {/* HEADER */}
 
       <header
-        className={`fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b px-4 sm:px-6 ${
+        className={`fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b px-4 backdrop-blur-xl sm:px-6 ${
           isDark
-            ? "border-white/[0.08] bg-[#101010]"
-            : "border-black/[0.08] bg-white"
+            ? "border-white/[0.08] bg-white/[0.025]"
+            : "border-black/[0.07] bg-black/[0.02]"
         }`}
       >
         <div className="flex min-w-0 items-center gap-3">
           <div
-            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tracking-[0.15em] ${
-              isDark ? "bg-white text-black" : "bg-black text-white"
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border text-xs font-bold tracking-[0.15em] ${
+              isDark
+                ? "border-white/[0.10] bg-white/[0.08] text-white"
+                : "border-black/[0.08] bg-black/[0.06] text-black"
             }`}
           >
             RT
@@ -500,10 +520,10 @@ export default function ChatScreen() {
             onClick={() => navigate("/friends")}
             aria-label="Friends"
             title="Friends"
-            className={`relative flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all active:scale-[0.98] ${
+            className={`relative flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium backdrop-blur-md transition-all active:scale-[0.98] ${
               isDark
-                ? "border-white/[0.08] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
-                : "border-black/[0.08] bg-black/[0.02] text-black/65 hover:bg-black/[0.05] hover:text-black"
+                ? "border-white/[0.08] bg-white/[0.045] text-white/70 hover:bg-white/[0.08] hover:text-white"
+                : "border-black/[0.08] bg-black/[0.035] text-black/65 hover:bg-black/[0.065] hover:text-black"
             }`}
           >
             <svg
@@ -525,29 +545,41 @@ export default function ChatScreen() {
 
             {friendRequestCount > 0 && (
               <span
-                className={`flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
-                  isDark ? "bg-white text-black" : "bg-black text-white"
+                className={`flex min-w-5 items-center justify-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${
+                  isDark
+                    ? "border-white/[0.12] bg-white/[0.10] text-white"
+                    : "border-black/[0.10] bg-black/[0.07] text-black"
                 }`}
               >
-                {friendRequestCount > 99 ? "99+" : friendRequestCount}
+                {friendRequestCount > 99
+                  ? "99+"
+                  : friendRequestCount}
               </span>
             )}
           </button>
 
           <button
             type="button"
-            aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
-            title={`Switch to ${isDark ? "light" : "dark"} mode`}
+            aria-label={`Switch to ${
+              isDark ? "light" : "dark"
+            } mode`}
+            title={`Switch to ${
+              isDark ? "light" : "dark"
+            } mode`}
             onClick={() =>
-              setTheme((current) => (current === "dark" ? "light" : "dark"))
+              setTheme((current) =>
+                current === "dark" ? "light" : "dark",
+              )
             }
-            className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all active:scale-[0.98] ${
+            className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium backdrop-blur-md transition-all active:scale-[0.98] ${
               isDark
-                ? "border-white/[0.08] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
-                : "border-black/[0.08] bg-black/[0.02] text-black/65 hover:bg-black/[0.05] hover:text-black"
+                ? "border-white/[0.08] bg-white/[0.045] text-white/70 hover:bg-white/[0.08] hover:text-white"
+                : "border-black/[0.08] bg-black/[0.035] text-black/65 hover:bg-black/[0.065] hover:text-black"
             }`}
           >
-            <span className="text-sm">{isDark ? "☀" : "☾"}</span>
+            <span className="text-sm">
+              {isDark ? "☀" : "☾"}
+            </span>
 
             <span className="hidden sm:inline">
               {isDark ? "Light" : "Dark"}
@@ -562,17 +594,18 @@ export default function ChatScreen() {
         <div
           className={`mx-auto flex h-[calc(100dvh-4rem)] w-full overflow-hidden sm:mt-4 sm:h-[calc(100dvh-5rem)] sm:max-w-[1500px] sm:rounded-2xl sm:border sm:shadow-2xl ${
             isDark
-              ? "bg-[#101010] sm:border-white/[0.08]"
-              : "bg-white sm:border-black/[0.08]"
+              ? "bg-[#0f0f0f] sm:border-white/[0.08]"
+              : "bg-[#f8f8f8] sm:border-black/[0.07]"
           }`}
         >
           {/* SIDEBAR */}
 
           <aside
             className={`min-w-0 flex-col overflow-hidden border-r ${
-              isDark ? "border-white/[0.08]" : "border-black/[0.08]"
-            }
-            ${
+              isDark
+                ? "border-white/[0.08]"
+                : "border-black/[0.07]"
+            } ${
               mobileChatOpen
                 ? "hidden md:flex"
                 : "flex w-full md:w-[330px] md:flex-none lg:w-[360px]"
@@ -581,26 +614,28 @@ export default function ChatScreen() {
             {/* SIDEBAR HEADER */}
 
             <div
-              className={`flex h-16 shrink-0 items-center border-b px-5 ${
-                isDark ? "border-white/[0.08]" : "border-black/[0.08]"
+              className={`flex h-16 shrink-0 items-center border-b px-5 backdrop-blur-xl ${
+                isDark
+                  ? "border-white/[0.08] bg-white/[0.02]"
+                  : "border-black/[0.07] bg-black/[0.015]"
               }`}
             >
               <div>
-                <h2 className="text-sm font-semibold">Conversations</h2>
+                <h2 className="text-sm font-semibold">
+                  Conversations
+                </h2>
 
                 <p
                   className={`mt-0.5 text-[11px] ${
-                    isDark ? "text-white/40" : "text-black/40"
+                    isDark
+                      ? "text-white/40"
+                      : "text-black/40"
                   }`}
                 >
                   Your recent chats
                 </p>
               </div>
             </div>
-
-            {/* CONVERSATION LIST
-                This must be flex-1 + min-h-0 so scrolling works correctly.
-            */}
 
             <div className="min-h-0 flex-1 overflow-hidden">
               <ConversationList
@@ -615,15 +650,19 @@ export default function ChatScreen() {
 
           <section
             className={`min-w-0 flex-1 flex-col overflow-hidden ${
-              mobileChatOpen ? "flex" : "hidden md:flex"
+              mobileChatOpen
+                ? "flex"
+                : "hidden md:flex"
             }`}
           >
             {!selectedUser || !currentConversationId ? (
               <div className="flex min-h-0 flex-1 items-center justify-center p-8">
                 <div className="max-w-sm text-center">
                   <div
-                    className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-2xl ${
-                      isDark ? "bg-white/[0.05]" : "bg-black/[0.04]"
+                    className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border text-2xl backdrop-blur-xl ${
+                      isDark
+                        ? "border-white/[0.07] bg-white/[0.045]"
+                        : "border-black/[0.07] bg-black/[0.035]"
                     }`}
                   >
                     💬
@@ -635,11 +674,13 @@ export default function ChatScreen() {
 
                   <p
                     className={`mt-2 text-sm leading-6 ${
-                      isDark ? "text-white/40" : "text-black/45"
+                      isDark
+                        ? "text-white/40"
+                        : "text-black/45"
                     }`}
                   >
-                    Choose a conversation from the sidebar to start messaging in
-                    real time.
+                    Choose a conversation from the sidebar to
+                    start messaging in real time.
                   </p>
                 </div>
               </div>
@@ -648,10 +689,10 @@ export default function ChatScreen() {
                 {/* CHAT HEADER */}
 
                 <div
-                  className={`flex h-16 shrink-0 items-center border-b px-4 sm:px-5 ${
+                  className={`flex h-16 shrink-0 items-center border-b px-4 backdrop-blur-xl sm:px-5 ${
                     isDark
-                      ? "border-white/[0.08] bg-[#101010]"
-                      : "border-black/[0.08] bg-white"
+                      ? "border-white/[0.08] bg-white/[0.025]"
+                      : "border-black/[0.07] bg-black/[0.02]"
                   }`}
                 >
                   <button
@@ -669,18 +710,22 @@ export default function ChatScreen() {
 
                   <div className="relative mr-3 shrink-0">
                     <div
-                      className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold ${
+                      className={`flex h-10 w-10 items-center justify-center rounded-full border text-xs font-semibold ${
                         isDark
-                          ? "bg-white/10 text-white"
-                          : "bg-black/5 text-black"
+                          ? "border-white/[0.08] bg-white/[0.07] text-white"
+                          : "border-black/[0.07] bg-black/[0.05] text-black"
                       }`}
                     >
-                      {selectedUser.username.slice(0, 2).toUpperCase()}
+                      {selectedUser.username
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </div>
 
                     <span
                       className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
-                        isDark ? "border-[#101010]" : "border-white"
+                        isDark
+                          ? "border-[#101010]"
+                          : "border-[#f8f8f8]"
                       } ${
                         isSelectedUserOnline
                           ? "bg-emerald-500"
@@ -716,7 +761,9 @@ export default function ChatScreen() {
                               : "text-black/40"
                         }`}
                       >
-                        {isSelectedUserOnline ? "Online" : "Offline"}
+                        {isSelectedUserOnline
+                          ? "Online"
+                          : "Offline"}
                       </span>
                     </div>
                   </div>
@@ -726,7 +773,9 @@ export default function ChatScreen() {
 
                 <div
                   className={`min-h-0 flex-1 overflow-y-auto ${
-                    isDark ? "bg-[#0b0b0b]" : "bg-[#fafafa]"
+                    isDark
+                      ? "bg-[#0a0a0a]"
+                      : "bg-[#f3f4f6]"
                   }`}
                 >
                   <ChatMessages
@@ -738,31 +787,37 @@ export default function ChatScreen() {
 
                 {/* TYPING */}
 
-                {typingUser && typingUser.userId !== currentUser?.id && (
-                  <div
-                    className={`shrink-0 border-t px-4 py-2 ${
-                      isDark
-                        ? "border-white/[0.08] bg-[#101010]"
-                        : "border-black/[0.08] bg-white"
-                    }`}
-                  >
-                    <div className="mx-auto max-w-4xl">
-                      <TypingIndicator username={typingUser.username} />
+                {typingUser &&
+                  typingUser.userId !== currentUser?.id && (
+                    <div
+                      className={`shrink-0 border-t px-4 py-2 backdrop-blur-xl ${
+                        isDark
+                          ? "border-white/[0.08] bg-white/[0.025]"
+                          : "border-black/[0.07] bg-black/[0.02]"
+                      }`}
+                    >
+                      <div className="mx-auto max-w-4xl">
+                        <TypingIndicator
+                          username={typingUser.username}
+                        />
+                      </div>
                     </div>
-                  </div>
-                )}
+                  )}
 
                 {/* MESSAGE INPUT */}
 
                 <div
-                  className={`shrink-0 border-t p-3 sm:p-4 ${
+                  className={`shrink-0 border-t p-3 backdrop-blur-xl sm:p-4 ${
                     isDark
-                      ? "border-white/[0.08] bg-[#101010]"
-                      : "border-black/[0.08] bg-white"
+                      ? "border-white/[0.08] bg-white/[0.025]"
+                      : "border-black/[0.07] bg-black/[0.02]"
                   }`}
                 >
                   <div className="mx-auto w-full max-w-4xl">
-                    <MessageInput onSend={sendMessage} theme={theme} />
+                    <MessageInput
+                      onSend={sendMessage}
+                      theme={theme}
+                    />
                   </div>
                 </div>
               </>

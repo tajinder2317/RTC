@@ -38,7 +38,9 @@ export default function ConversationList({
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
 
-  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
+  const onlineUserIds = usePresenceStore(
+    (state) => state.onlineUserIds,
+  );
 
   const isDark = theme === "dark";
 
@@ -48,7 +50,9 @@ export default function ConversationList({
 
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [startingChat, setStartingChat] = useState<string | null>(null);
+  const [startingChat, setStartingChat] = useState<string | null>(
+    null,
+  );
 
   /* =========================================================
      HELPERS
@@ -102,9 +106,10 @@ export default function ConversationList({
       }
 
       const messageMap = new Map(
-        [...(existing.messages ?? []), ...(normalized.messages ?? [])].map(
-          (message) => [message.id, message],
-        ),
+        [
+          ...(existing.messages ?? []),
+          ...(normalized.messages ?? []),
+        ].map((message) => [message.id, message]),
       );
 
       byConversationId.set(conversation.id, {
@@ -128,7 +133,10 @@ export default function ConversationList({
       const pairKey = getConversationPairKey(conversation);
 
       if (!pairKey) {
-        byPair.set(`conversation:${conversation.id}`, conversation);
+        byPair.set(
+          `conversation:${conversation.id}`,
+          conversation,
+        );
         continue;
       }
 
@@ -140,10 +148,12 @@ export default function ConversationList({
       }
 
       const existingLatest =
-        existing.messages?.[0]?.createdAt ?? existing.createdAt;
+        existing.messages?.[0]?.createdAt ??
+        existing.createdAt;
 
       const currentLatest =
-        conversation.messages?.[0]?.createdAt ?? conversation.createdAt;
+        conversation.messages?.[0]?.createdAt ??
+        conversation.createdAt;
 
       if (
         new Date(currentLatest).getTime() >
@@ -154,8 +164,11 @@ export default function ConversationList({
     }
 
     return [...byPair.values()].sort((a, b) => {
-      const aDate = a.messages?.[0]?.createdAt ?? a.createdAt;
-      const bDate = b.messages?.[0]?.createdAt ?? b.createdAt;
+      const aDate =
+        a.messages?.[0]?.createdAt ?? a.createdAt;
+
+      const bDate =
+        b.messages?.[0]?.createdAt ?? b.createdAt;
 
       return (
         new Date(bDate).getTime() -
@@ -209,7 +222,10 @@ export default function ConversationList({
         setConversations(normalizeConversations(loaded));
       } catch (error) {
         if (!cancelled) {
-          console.error("Fetch conversations error:", error);
+          console.error(
+            "Fetch conversations error:",
+            error,
+          );
           setConversations([]);
         }
       } finally {
@@ -568,9 +584,7 @@ export default function ConversationList({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      {/* =====================================================
-          SEARCH
-          ===================================================== */}
+      {/* SEARCH */}
 
       <div
         className={`relative shrink-0 border-b p-4 ${
@@ -604,10 +618,10 @@ export default function ConversationList({
             }
             placeholder="Search users..."
             autoComplete="off"
-            className={`h-10 w-full rounded-xl border pl-10 pr-9 text-xs outline-none transition ${
+            className={`h-10 w-full rounded-xl border pl-10 pr-9 text-xs outline-none backdrop-blur-md transition ${
               isDark
-                ? "border-white/[0.08] bg-white/[0.025] text-white placeholder:text-white/25 focus:border-white/20 focus:bg-white/[0.04]"
-                : "border-black/[0.08] bg-black/[0.025] text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]"
+                ? "border-white/[0.08] bg-white/[0.025] text-white placeholder:text-white/25 focus:border-white/20 focus:bg-white/[0.045]"
+                : "border-black/[0.08] bg-black/[0.025] text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.045]"
             }`}
           />
 
@@ -631,10 +645,10 @@ export default function ConversationList({
 
         {search.trim() && (
           <div
-            className={`absolute left-3 right-3 top-[4.25rem] z-30 overflow-hidden rounded-xl border shadow-xl ${
+            className={`absolute left-3 right-3 top-[4.25rem] z-30 overflow-hidden rounded-xl border shadow-xl backdrop-blur-xl ${
               isDark
-                ? "border-white/[0.08] bg-[#151515] shadow-black/40"
-                : "border-black/[0.08] bg-white shadow-black/10"
+                ? "border-white/[0.08] bg-[#151515]/95 shadow-black/40"
+                : "border-black/[0.08] bg-[#f7f7f7]/95 shadow-black/10"
             }`}
           >
             {usersLoading ? (
@@ -673,10 +687,10 @@ export default function ConversationList({
                       }`}
                     >
                       <div
-                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-[10px] font-semibold ${
                           isDark
-                            ? "bg-white/[0.08] text-white"
-                            : "bg-black/[0.06] text-black"
+                            ? "border-white/[0.07] bg-white/[0.07] text-white"
+                            : "border-black/[0.07] bg-black/[0.045] text-black"
                         }`}
                       >
                         {user.username
@@ -714,10 +728,10 @@ export default function ConversationList({
                         disabled={
                           startingChat !== null
                         }
-                        className={`shrink-0 rounded-lg px-3 py-1.5 text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                        className={`shrink-0 rounded-lg border px-3 py-1.5 text-[10px] font-semibold backdrop-blur-md transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
                           isDark
-                            ? "bg-white text-black hover:bg-white/85"
-                            : "bg-black text-white hover:bg-black/80"
+                            ? "border-white/[0.10] bg-white/[0.08] text-white/80 hover:bg-white/[0.13] hover:text-white"
+                            : "border-black/[0.09] bg-black/[0.055] text-black/70 hover:bg-black/[0.09] hover:text-black"
                         }`}
                       >
                         {startingChat === user.id
@@ -733,19 +747,17 @@ export default function ConversationList({
         )}
       </div>
 
-      {/* =====================================================
-          CONVERSATIONS
-          ===================================================== */}
+      {/* CONVERSATIONS */}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {conversations.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6">
             <div className="max-w-[220px] text-center">
               <div
-                className={`mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-lg ${
+                className={`mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl border text-lg ${
                   isDark
-                    ? "bg-white/[0.04]"
-                    : "bg-black/[0.04]"
+                    ? "border-white/[0.07] bg-white/[0.045]"
+                    : "border-black/[0.07] bg-black/[0.035]"
                 }`}
               >
                 💬
@@ -805,22 +817,22 @@ export default function ConversationList({
                       conversation,
                     )
                   }
-                  className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
+                  className={`group relative flex w-full items-center gap-3 rounded-xl border px-3 py-3 text-left transition ${
                     isSelected
                       ? isDark
-                        ? "bg-white/[0.07]"
-                        : "bg-black/[0.06]"
+                        ? "border-white/[0.07] bg-white/[0.065]"
+                        : "border-black/[0.07] bg-black/[0.05]"
                       : isDark
-                        ? "hover:bg-white/[0.035]"
-                        : "hover:bg-black/[0.035]"
+                        ? "border-transparent hover:bg-white/[0.035]"
+                        : "border-transparent hover:bg-black/[0.035]"
                   }`}
                 >
                   {isSelected && (
                     <span
                       className={`absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full ${
                         isDark
-                          ? "bg-white"
-                          : "bg-black"
+                          ? "bg-white/70"
+                          : "bg-black/60"
                       }`}
                     />
                   )}
@@ -829,14 +841,14 @@ export default function ConversationList({
 
                   <div className="relative shrink-0">
                     <div
-                      className={`flex h-11 w-11 items-center justify-center rounded-full text-[11px] font-semibold ${
+                      className={`flex h-11 w-11 items-center justify-center rounded-full border text-[11px] font-semibold ${
                         isSelected
                           ? isDark
-                            ? "bg-white text-black"
-                            : "bg-black text-white"
+                            ? "border-white/[0.12] bg-white/[0.12] text-white"
+                            : "border-black/[0.10] bg-black/[0.08] text-black"
                           : isDark
-                            ? "bg-white/[0.08] text-white"
-                            : "bg-black/[0.06] text-black"
+                            ? "border-white/[0.06] bg-white/[0.07] text-white"
+                            : "border-black/[0.06] bg-black/[0.045] text-black"
                       }`}
                     >
                       {otherUser.username
@@ -848,7 +860,7 @@ export default function ConversationList({
                       className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
                         isDark
                           ? "border-[#101010]"
-                          : "border-white"
+                          : "border-[#f8f8f8]"
                       } ${
                         isOnline
                           ? "bg-emerald-500"
@@ -879,10 +891,10 @@ export default function ConversationList({
 
                       {unreadCount > 0 && (
                         <span
-                          className={`flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                          className={`flex min-w-5 shrink-0 items-center justify-center rounded-full border px-1.5 py-0.5 text-[9px] font-bold ${
                             isDark
-                              ? "bg-white text-black"
-                              : "bg-black text-white"
+                              ? "border-white/[0.12] bg-white/[0.10] text-white"
+                              : "border-black/[0.10] bg-black/[0.07] text-black"
                           }`}
                         >
                           {unreadCount > 99
@@ -940,15 +952,13 @@ export default function ConversationList({
         )}
       </div>
 
-      {/* =====================================================
-          QUICK CHAT — PINNED BOTTOM
-          ===================================================== */}
+      {/* QUICK CHAT */}
 
       <div
-        className={`shrink-0 border-t p-3 sm:p-4 ${
+        className={`shrink-0 border-t p-3 backdrop-blur-xl sm:p-4 ${
           isDark
-            ? "border-white/[0.08] bg-[#101010]"
-            : "border-black/[0.08] bg-white"
+            ? "border-white/[0.08] bg-white/[0.025]"
+            : "border-black/[0.07] bg-black/[0.02]"
         }`}
       >
         <div className="mb-2 flex items-center justify-between px-1">
@@ -977,28 +987,28 @@ export default function ConversationList({
           <div
             className={`flex h-12 items-center justify-center rounded-xl border text-[11px] ${
               isDark
-                ? "border-white/[0.06] bg-white/[0.02] text-white/35"
-                : "border-black/[0.06] bg-black/[0.02] text-black/40"
+                ? "border-white/[0.06] bg-white/[0.025] text-white/35"
+                : "border-black/[0.06] bg-black/[0.025] text-black/40"
             }`}
           >
             Loading...
           </div>
         ) : quickChatUser ? (
           <div
-            className={`flex items-center gap-3 rounded-xl border p-2.5 ${
+            className={`flex items-center gap-3 rounded-xl border p-2.5 backdrop-blur-xl ${
               isDark
-                ? "border-white/[0.07] bg-white/[0.025]"
-                : "border-black/[0.07] bg-black/[0.015]"
+                ? "border-white/[0.08] bg-white/[0.045]"
+                : "border-black/[0.07] bg-black/[0.035]"
             }`}
           >
             {/* AVATAR */}
 
             <div className="relative shrink-0">
               <div
-                className={`flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-semibold ${
+                className={`flex h-9 w-9 items-center justify-center rounded-full border text-[10px] font-semibold ${
                   isDark
-                    ? "bg-white/[0.08] text-white"
-                    : "bg-black/[0.06] text-black"
+                    ? "border-white/[0.07] bg-white/[0.07] text-white"
+                    : "border-black/[0.07] bg-black/[0.045] text-black"
                 }`}
               >
                 {quickChatUser.username
@@ -1010,7 +1020,7 @@ export default function ConversationList({
                 className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
                   isDark
                     ? "border-[#101010]"
-                    : "border-white"
+                    : "border-[#f8f8f8]"
                 } ${
                   onlineUserIds.includes(
                     quickChatUser.id,
@@ -1063,14 +1073,13 @@ export default function ConversationList({
                 handleStartChat(quickChatUser)
               }
               disabled={startingChat !== null}
-              className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-semibold transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+              className={`shrink-0 rounded-lg border px-3 py-2 text-[10px] font-semibold backdrop-blur-md transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
                 isDark
-                  ? "bg-white text-black hover:bg-white/90"
-                  : "bg-black text-white hover:bg-black/85"
+                  ? "border-white/[0.10] bg-white/[0.08] text-white/80 hover:bg-white/[0.13] hover:text-white"
+                  : "border-black/[0.09] bg-black/[0.055] text-black/70 hover:bg-black/[0.09] hover:text-black"
               }`}
             >
-              {startingChat ===
-              quickChatUser.id
+              {startingChat === quickChatUser.id
                 ? "..."
                 : "Chat"}
             </button>
