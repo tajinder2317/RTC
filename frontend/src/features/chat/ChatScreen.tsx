@@ -609,131 +609,6 @@ export default function ChatScreen() {
                 theme={theme}
               />
             </div>
-
-            {/* QUICK CHAT */}
-
-            <div
-              className={`hidden shrink-0 border-t p-4 md:block ${
-                isDark ? "border-white/[0.08]" : "border-black/[0.08]"
-              }`}
-            >
-              <div className="mb-3 flex items-center justify-between">
-                <h3
-                  className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
-                    isDark ? "text-white/35" : "text-black/40"
-                  }`}
-                >
-                  Start a chat
-                </h3>
-
-                <span
-                  className={`rounded-md px-2 py-1 text-[9px] font-medium ${
-                    isDark
-                      ? "bg-white/[0.06] text-white/40"
-                      : "bg-black/[0.04] text-black/40"
-                  }`}
-                >
-                  Quick
-                </span>
-              </div>
-
-              {loadingUsers ? (
-                <div
-                  className={`flex items-center gap-2 text-xs ${
-                    isDark ? "text-white/40" : "text-black/40"
-                  }`}
-                >
-                  <span
-                    className={`h-3.5 w-3.5 animate-spin rounded-full border-2 border-t-transparent ${
-                      isDark ? "border-white/20" : "border-black/20"
-                    }`}
-                  />
-                  Loading users...
-                </div>
-              ) : (
-                (() => {
-                  const quickUsers = users.filter(
-                    (user) =>
-                      user.username === "dhillon2317" &&
-                      user.id !== currentUser?.id,
-                  );
-
-                  if (quickUsers.length === 0) {
-                    return (
-                      <p
-                        className={`text-xs ${
-                          isDark ? "text-white/40" : "text-black/40"
-                        }`}
-                      >
-                        No other users found.
-                      </p>
-                    );
-                  }
-
-                  return (
-                    <div className="space-y-2">
-                      {quickUsers.map((user) => {
-                        const isOnline = onlineUserIds.includes(user.id);
-
-                        return (
-                          <div
-                            key={user.id}
-                            className={`flex items-center gap-3 rounded-xl border p-2.5 ${
-                              isDark
-                                ? "border-white/[0.06] bg-white/[0.02]"
-                                : "border-black/[0.06] bg-black/[0.015]"
-                            }`}
-                          >
-                            <div className="relative shrink-0">
-                              <div
-                                className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold ${
-                                  isDark
-                                    ? "bg-white/10 text-white"
-                                    : "bg-black/5 text-black"
-                                }`}
-                              >
-                                {user.username.slice(0, 2).toUpperCase()}
-                              </div>
-
-                              <span
-                                className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
-                                  isDark ? "border-[#101010]" : "border-white"
-                                } ${
-                                  isOnline
-                                    ? "bg-emerald-500"
-                                    : isDark
-                                      ? "bg-white/20"
-                                      : "bg-black/15"
-                                }`}
-                              />
-                            </div>
-
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-xs font-medium">
-                                {user.username}
-                              </p>
-                            </div>
-
-                            <button
-                              type="button"
-                              onClick={() => startConversation(user)}
-                              disabled={creatingConversation}
-                              className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 ${
-                                isDark
-                                  ? "bg-white text-black hover:bg-white/90"
-                                  : "bg-black text-white hover:bg-black/85"
-                              }`}
-                            >
-                              {creatingConversation ? "..." : "Chat"}
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  );
-                })()
-              )}
-            </div>
           </aside>
 
           {/* CHAT PANEL */}
@@ -857,6 +732,7 @@ export default function ChatScreen() {
                   <ChatMessages
                     messages={messages}
                     currentUserId={currentUser?.id ?? ""}
+                    theme={theme}
                   />
                 </div>
 

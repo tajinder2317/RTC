@@ -54,7 +54,9 @@ export default function ConversationList({
      HELPERS
      ========================================================= */
 
-  const getOtherUser = (conversation: Conversation): ChatUser | undefined => {
+  const getOtherUser = (
+    conversation: Conversation,
+  ): ChatUser | undefined => {
     return conversation.members.find(
       (member) => member.user.id !== currentUser?.id,
     )?.user;
@@ -75,7 +77,9 @@ export default function ConversationList({
     return `${memberIds[0]}:${memberIds[1]}`;
   };
 
-  const normalizeConversations = (input: Conversation[]): Conversation[] => {
+  const normalizeConversations = (
+    input: Conversation[],
+  ): Conversation[] => {
     const byConversationId = new Map<string, Conversation>();
 
     for (const conversation of input) {
@@ -85,7 +89,8 @@ export default function ConversationList({
         ...conversation,
         messages: [...(conversation.messages ?? [])].sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() -
+            new Date(a.createdAt).getTime(),
         ),
       };
 
@@ -111,7 +116,8 @@ export default function ConversationList({
         ),
         messages: [...messageMap.values()].sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() -
+            new Date(a.createdAt).getTime(),
         ),
       });
     }
@@ -140,7 +146,8 @@ export default function ConversationList({
         conversation.messages?.[0]?.createdAt ?? conversation.createdAt;
 
       if (
-        new Date(currentLatest).getTime() > new Date(existingLatest).getTime()
+        new Date(currentLatest).getTime() >
+        new Date(existingLatest).getTime()
       ) {
         byPair.set(pairKey, conversation);
       }
@@ -150,7 +157,10 @@ export default function ConversationList({
       const aDate = a.messages?.[0]?.createdAt ?? a.createdAt;
       const bDate = b.messages?.[0]?.createdAt ?? b.createdAt;
 
-      return new Date(bDate).getTime() - new Date(aDate).getTime();
+      return (
+        new Date(bDate).getTime() -
+        new Date(aDate).getTime()
+      );
     });
   };
 
@@ -183,12 +193,16 @@ export default function ConversationList({
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch conversations");
+          throw new Error(
+            data.message || "Failed to fetch conversations",
+          );
         }
 
         if (cancelled) return;
 
-        const loaded: Conversation[] = Array.isArray(data.conversations)
+        const loaded: Conversation[] = Array.isArray(
+          data.conversations,
+        )
           ? data.conversations
           : [];
 
@@ -276,24 +290,31 @@ export default function ConversationList({
      ========================================================= */
 
   useEffect(() => {
-    const handleNewMessage = (message: NewMessagePayload) => {
+    const handleNewMessage = (
+      message: NewMessagePayload,
+    ) => {
       if (!message?.conversationId) return;
 
       setConversations((previous) => {
         const existing = previous.find(
-          (conversation) => conversation.id === message.conversationId,
+          (conversation) =>
+            conversation.id === message.conversationId,
         );
 
         if (!existing) {
           return previous;
         }
 
-        const isCurrent = message.conversationId === currentConversationId;
+        const isCurrent =
+          message.conversationId === currentConversationId;
 
-        const isMine = message.senderId === currentUser?.id;
+        const isMine =
+          message.senderId === currentUser?.id;
 
         const unreadCount =
-          isCurrent || isMine ? 0 : (existing.unreadCount ?? 0) + 1;
+          isCurrent || isMine
+            ? 0
+            : (existing.unreadCount ?? 0) + 1;
 
         const nextMessage = {
           id: message.id,
@@ -307,7 +328,9 @@ export default function ConversationList({
 
         const messages = [
           nextMessage,
-          ...(existing.messages ?? []).filter((item) => item.id !== message.id),
+          ...(existing.messages ?? []).filter(
+            (item) => item.id !== message.id,
+          ),
         ];
 
         const updated: Conversation = {
@@ -319,7 +342,8 @@ export default function ConversationList({
         return normalizeConversations([
           updated,
           ...previous.filter(
-            (conversation) => conversation.id !== message.conversationId,
+            (conversation) =>
+              conversation.id !== message.conversationId,
           ),
         ]);
       });
@@ -337,7 +361,9 @@ export default function ConversationList({
      ========================================================= */
 
   useEffect(() => {
-    const handleMessageRead = (payload: MessageReadPayload) => {
+    const handleMessageRead = (
+      payload: MessageReadPayload,
+    ) => {
       if (
         !payload?.conversationId ||
         !Array.isArray(payload.messageIds) ||
@@ -350,20 +376,23 @@ export default function ConversationList({
 
       setConversations((previous) =>
         previous.map((conversation) => {
-          if (conversation.id !== payload.conversationId) {
+          if (
+            conversation.id !== payload.conversationId
+          ) {
             return conversation;
           }
 
           return {
             ...conversation,
             unreadCount: 0,
-            messages: (conversation.messages ?? []).map((message) =>
-              messageIdSet.has(message.id)
-                ? {
-                    ...message,
-                    readAt: payload.readAt,
-                  }
-                : message,
+            messages: (conversation.messages ?? []).map(
+              (message) =>
+                messageIdSet.has(message.id)
+                  ? {
+                      ...message,
+                      readAt: payload.readAt,
+                    }
+                  : message,
             ),
           };
         }),
@@ -381,7 +410,9 @@ export default function ConversationList({
      SELECT
      ========================================================= */
 
-  const handleSelectConversation = (conversation: Conversation) => {
+  const handleSelectConversation = (
+    conversation: Conversation,
+  ) => {
     const updatedConversation: Conversation = {
       ...conversation,
       unreadCount: 0,
@@ -390,7 +421,9 @@ export default function ConversationList({
 
     setConversations((previous) =>
       previous.map((item) =>
-        item.id === conversation.id ? updatedConversation : item,
+        item.id === conversation.id
+          ? updatedConversation
+          : item,
       ),
     );
 
@@ -401,13 +434,18 @@ export default function ConversationList({
      START CHAT
      ========================================================= */
 
-  const handleStartChat = async (user: ChatUser) => {
+  const handleStartChat = async (
+    user: ChatUser,
+  ) => {
     if (!token || startingChat) return;
 
     try {
       setStartingChat(user.id);
 
-      const conversation = await createConversation(token, user.id);
+      const conversation = await createConversation(
+        token,
+        user.id,
+      );
 
       const normalizedConversation: Conversation = {
         ...conversation,
@@ -416,18 +454,36 @@ export default function ConversationList({
       };
 
       setConversations((previous) =>
-        normalizeConversations([normalizedConversation, ...previous]),
+        normalizeConversations([
+          normalizedConversation,
+          ...previous,
+        ]),
       );
 
       onSelectConversation(normalizedConversation);
 
       setSearch("");
     } catch (error) {
-      console.error("Start conversation error:", error);
+      console.error(
+        "Start conversation error:",
+        error,
+      );
     } finally {
       setStartingChat(null);
     }
   };
+
+  /* =========================================================
+     QUICK CHAT USER
+     ========================================================= */
+
+  const quickChatUser = useMemo(() => {
+    return users.find(
+      (user) =>
+        user.username === "dhillon2317" &&
+        user.id !== currentUser?.id,
+    );
+  }, [users, currentUser?.id]);
 
   /* =========================================================
      SEARCH
@@ -452,16 +508,29 @@ export default function ConversationList({
 
     return users
       .filter(
-        (user) => user.id !== currentUser?.id && !existingUserIds.has(user.id),
+        (user) =>
+          user.id !== currentUser?.id &&
+          !existingUserIds.has(user.id),
       )
       .filter((user) => {
-        const username = user.username.toLowerCase();
-        const email = user.email.toLowerCase();
+        const username =
+          user.username.toLowerCase();
 
-        return username.includes(query) || email.includes(query);
+        const email =
+          user.email.toLowerCase();
+
+        return (
+          username.includes(query) ||
+          email.includes(query)
+        );
       })
       .slice(0, 8);
-  }, [conversations, currentUser?.id, search, users]);
+  }, [
+    conversations,
+    currentUser?.id,
+    search,
+    users,
+  ]);
 
   /* =========================================================
      LOADING
@@ -472,15 +541,22 @@ export default function ConversationList({
       <div className="flex h-full min-h-0 w-full items-center justify-center">
         <div
           className={`flex items-center gap-2.5 text-xs ${
-            isDark ? "text-white/40" : "text-black/40"
+            isDark
+              ? "text-white/40"
+              : "text-black/40"
           }`}
         >
           <span
             className={`h-4 w-4 animate-spin rounded-full border-2 border-t-transparent ${
-              isDark ? "border-white/20" : "border-black/15"
+              isDark
+                ? "border-white/20"
+                : "border-black/15"
             }`}
           />
-          <span>Loading conversations...</span>
+
+          <span>
+            Loading conversations...
+          </span>
         </div>
       </div>
     );
@@ -492,17 +568,23 @@ export default function ConversationList({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      {/* SEARCH */}
+      {/* =====================================================
+          SEARCH
+          ===================================================== */}
 
       <div
         className={`relative shrink-0 border-b p-4 ${
-          isDark ? "border-white/[0.06]" : "border-black/[0.06]"
+          isDark
+            ? "border-white/[0.06]"
+            : "border-black/[0.06]"
         }`}
       >
         <div className="relative">
           <svg
             className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
-              isDark ? "text-white/30" : "text-black/30"
+              isDark
+                ? "text-white/30"
+                : "text-black/30"
             }`}
             viewBox="0 0 24 24"
             fill="none"
@@ -517,7 +599,9 @@ export default function ConversationList({
           <input
             type="text"
             value={search}
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
             placeholder="Search users..."
             autoComplete="off"
             className={`h-10 w-full rounded-xl border pl-10 pr-9 text-xs outline-none transition ${
@@ -555,8 +639,10 @@ export default function ConversationList({
           >
             {usersLoading ? (
               <div
-                className={`flex items-center gap-2 px-4 py-4 text-xs ${
-                  isDark ? "text-white/40" : "text-black/40"
+                className={`px-4 py-4 text-xs ${
+                  isDark
+                    ? "text-white/40"
+                    : "text-black/40"
                 }`}
               >
                 Searching...
@@ -564,7 +650,9 @@ export default function ConversationList({
             ) : filteredUsers.length === 0 ? (
               <div
                 className={`px-4 py-4 text-xs ${
-                  isDark ? "text-white/40" : "text-black/40"
+                  isDark
+                    ? "text-white/40"
+                    : "text-black/40"
                 }`}
               >
                 No users found
@@ -572,7 +660,8 @@ export default function ConversationList({
             ) : (
               <div className="max-h-80 overflow-y-auto p-2">
                 {filteredUsers.map((user) => {
-                  const isOnline = onlineUserIds.includes(user.id);
+                  const isOnline =
+                    onlineUserIds.includes(user.id);
 
                   return (
                     <div
@@ -584,19 +673,23 @@ export default function ConversationList({
                       }`}
                     >
                       <div
-                        className={`flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-semibold ${
+                        className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold ${
                           isDark
                             ? "bg-white/[0.08] text-white"
                             : "bg-black/[0.06] text-black"
                         }`}
                       >
-                        {user.username.slice(0, 2).toUpperCase()}
+                        {user.username
+                          .slice(0, 2)
+                          .toUpperCase()}
                       </div>
 
                       <div className="min-w-0 flex-1">
                         <p
                           className={`truncate text-xs font-medium ${
-                            isDark ? "text-white" : "text-black"
+                            isDark
+                              ? "text-white"
+                              : "text-black"
                           }`}
                         >
                           {user.username}
@@ -604,7 +697,9 @@ export default function ConversationList({
 
                         <p
                           className={`truncate text-[10px] ${
-                            isDark ? "text-white/35" : "text-black/40"
+                            isDark
+                              ? "text-white/35"
+                              : "text-black/40"
                           }`}
                         >
                           {user.email}
@@ -613,15 +708,21 @@ export default function ConversationList({
 
                       <button
                         type="button"
-                        onClick={() => handleStartChat(user)}
-                        disabled={startingChat !== null}
+                        onClick={() =>
+                          handleStartChat(user)
+                        }
+                        disabled={
+                          startingChat !== null
+                        }
                         className={`shrink-0 rounded-lg px-3 py-1.5 text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
                           isDark
                             ? "bg-white text-black hover:bg-white/85"
                             : "bg-black text-white hover:bg-black/80"
                         }`}
                       >
-                        {startingChat === user.id ? "..." : "Chat"}
+                        {startingChat === user.id
+                          ? "..."
+                          : "Chat"}
                       </button>
                     </div>
                   );
@@ -632,7 +733,9 @@ export default function ConversationList({
         )}
       </div>
 
-      {/* CONVERSATIONS */}
+      {/* =====================================================
+          CONVERSATIONS
+          ===================================================== */}
 
       <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {conversations.length === 0 ? (
@@ -640,7 +743,9 @@ export default function ConversationList({
             <div className="max-w-[220px] text-center">
               <div
                 className={`mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-lg ${
-                  isDark ? "bg-white/[0.04]" : "bg-black/[0.04]"
+                  isDark
+                    ? "bg-white/[0.04]"
+                    : "bg-black/[0.04]"
                 }`}
               >
                 💬
@@ -648,7 +753,9 @@ export default function ConversationList({
 
               <p
                 className={`text-xs font-semibold ${
-                  isDark ? "text-white" : "text-black"
+                  isDark
+                    ? "text-white"
+                    : "text-black"
                 }`}
               >
                 No conversations yet
@@ -656,33 +763,48 @@ export default function ConversationList({
 
               <p
                 className={`mt-1.5 text-[11px] leading-5 ${
-                  isDark ? "text-white/35" : "text-black/40"
+                  isDark
+                    ? "text-white/35"
+                    : "text-black/40"
                 }`}
               >
-                Search for someone above to start chatting.
+                Search for someone above to
+                start chatting.
               </p>
             </div>
           </div>
         ) : (
           <div>
             {conversations.map((conversation) => {
-              const otherUser = getOtherUser(conversation);
+              const otherUser =
+                getOtherUser(conversation);
 
               if (!otherUser) return null;
 
-              const lastMessage = conversation.messages?.[0];
+              const lastMessage =
+                conversation.messages?.[0];
 
-              const isSelected = conversation.id === currentConversationId;
+              const isSelected =
+                conversation.id ===
+                currentConversationId;
 
-              const isOnline = onlineUserIds.includes(otherUser.id);
+              const isOnline =
+                onlineUserIds.includes(
+                  otherUser.id,
+                );
 
-              const unreadCount = conversation.unreadCount ?? 0;
+              const unreadCount =
+                conversation.unreadCount ?? 0;
 
               return (
                 <button
                   key={conversation.id}
                   type="button"
-                  onClick={() => handleSelectConversation(conversation)}
+                  onClick={() =>
+                    handleSelectConversation(
+                      conversation,
+                    )
+                  }
                   className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
                     isSelected
                       ? isDark
@@ -696,7 +818,9 @@ export default function ConversationList({
                   {isSelected && (
                     <span
                       className={`absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full ${
-                        isDark ? "bg-white" : "bg-black"
+                        isDark
+                          ? "bg-white"
+                          : "bg-black"
                       }`}
                     />
                   )}
@@ -715,12 +839,16 @@ export default function ConversationList({
                             : "bg-black/[0.06] text-black"
                       }`}
                     >
-                      {otherUser.username.slice(0, 2).toUpperCase()}
+                      {otherUser.username
+                        .slice(0, 2)
+                        .toUpperCase()}
                     </div>
 
                     <span
                       className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
-                        isDark ? "border-[#101010]" : "border-white"
+                        isDark
+                          ? "border-[#101010]"
+                          : "border-white"
                       } ${
                         isOnline
                           ? "bg-emerald-500"
@@ -757,7 +885,9 @@ export default function ConversationList({
                               : "bg-black text-white"
                           }`}
                         >
-                          {unreadCount > 99 ? "99+" : unreadCount}
+                          {unreadCount > 99
+                            ? "99+"
+                            : unreadCount}
                         </span>
                       )}
                     </div>
@@ -772,12 +902,16 @@ export default function ConversationList({
                               : "text-black/30"
                         }`}
                       >
-                        {isOnline ? "Online" : "Offline"}
+                        {isOnline
+                          ? "Online"
+                          : "Offline"}
                       </span>
 
                       <span
                         className={`shrink-0 text-[9px] ${
-                          isDark ? "text-white/20" : "text-black/20"
+                          isDark
+                            ? "text-white/20"
+                            : "text-black/20"
                         }`}
                       >
                         •
@@ -794,13 +928,163 @@ export default function ConversationList({
                               : "text-black/35"
                         }`}
                       >
-                        {lastMessage?.text || "No messages yet"}
+                        {lastMessage?.text ||
+                          "No messages yet"}
                       </p>
                     </div>
                   </div>
                 </button>
               );
             })}
+          </div>
+        )}
+      </div>
+
+      {/* =====================================================
+          QUICK CHAT — PINNED BOTTOM
+          ===================================================== */}
+
+      <div
+        className={`shrink-0 border-t p-3 sm:p-4 ${
+          isDark
+            ? "border-white/[0.08] bg-[#101010]"
+            : "border-black/[0.08] bg-white"
+        }`}
+      >
+        <div className="mb-2 flex items-center justify-between px-1">
+          <p
+            className={`text-[10px] font-semibold uppercase tracking-[0.14em] ${
+              isDark
+                ? "text-white/35"
+                : "text-black/40"
+            }`}
+          >
+            Quick chat
+          </p>
+
+          <span
+            className={`text-[9px] ${
+              isDark
+                ? "text-white/20"
+                : "text-black/25"
+            }`}
+          >
+            Direct
+          </span>
+        </div>
+
+        {usersLoading ? (
+          <div
+            className={`flex h-12 items-center justify-center rounded-xl border text-[11px] ${
+              isDark
+                ? "border-white/[0.06] bg-white/[0.02] text-white/35"
+                : "border-black/[0.06] bg-black/[0.02] text-black/40"
+            }`}
+          >
+            Loading...
+          </div>
+        ) : quickChatUser ? (
+          <div
+            className={`flex items-center gap-3 rounded-xl border p-2.5 ${
+              isDark
+                ? "border-white/[0.07] bg-white/[0.025]"
+                : "border-black/[0.07] bg-black/[0.015]"
+            }`}
+          >
+            {/* AVATAR */}
+
+            <div className="relative shrink-0">
+              <div
+                className={`flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-semibold ${
+                  isDark
+                    ? "bg-white/[0.08] text-white"
+                    : "bg-black/[0.06] text-black"
+                }`}
+              >
+                {quickChatUser.username
+                  .slice(0, 2)
+                  .toUpperCase()}
+              </div>
+
+              <span
+                className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
+                  isDark
+                    ? "border-[#101010]"
+                    : "border-white"
+                } ${
+                  onlineUserIds.includes(
+                    quickChatUser.id,
+                  )
+                    ? "bg-emerald-500"
+                    : isDark
+                      ? "bg-white/20"
+                      : "bg-black/15"
+                }`}
+              />
+            </div>
+
+            {/* USER */}
+
+            <div className="min-w-0 flex-1">
+              <p
+                className={`truncate text-xs font-semibold ${
+                  isDark
+                    ? "text-white"
+                    : "text-black"
+                }`}
+              >
+                {quickChatUser.username}
+              </p>
+
+              <p
+                className={`mt-0.5 text-[9px] ${
+                  onlineUserIds.includes(
+                    quickChatUser.id,
+                  )
+                    ? "text-emerald-500"
+                    : isDark
+                      ? "text-white/30"
+                      : "text-black/35"
+                }`}
+              >
+                {onlineUserIds.includes(
+                  quickChatUser.id,
+                )
+                  ? "Online"
+                  : "Offline"}
+              </p>
+            </div>
+
+            {/* CHAT BUTTON */}
+
+            <button
+              type="button"
+              onClick={() =>
+                handleStartChat(quickChatUser)
+              }
+              disabled={startingChat !== null}
+              className={`shrink-0 rounded-lg px-3 py-2 text-[10px] font-semibold transition active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                isDark
+                  ? "bg-white text-black hover:bg-white/90"
+                  : "bg-black text-white hover:bg-black/85"
+              }`}
+            >
+              {startingChat ===
+              quickChatUser.id
+                ? "..."
+                : "Chat"}
+            </button>
+          </div>
+        ) : (
+          <div
+            className={`rounded-xl border px-3 py-3 text-center text-[10px] ${
+              isDark
+                ? "border-white/[0.06] bg-white/[0.02] text-white/30"
+                : "border-black/[0.06] bg-black/[0.02] text-black/35"
+            }`}
+          >
+            User <strong>dhillon2317</strong> not
+            found.
           </div>
         )}
       </div>

@@ -6,6 +6,7 @@ type MessageBubbleProps = {
   isLatestOutgoingMessage: boolean;
   deliveredAt?: string | null;
   readAt?: string | null;
+  createdAt: string;
   theme?: Theme;
 };
 
@@ -15,16 +16,21 @@ export default function MessageBubble({
   isLatestOutgoingMessage,
   deliveredAt,
   readAt,
+  createdAt,
   theme = "dark",
 }: MessageBubbleProps) {
   const isDark = theme === "dark";
 
   /*
-   * Message status
+   * =========================================================
+   * MESSAGE STATUS
+   * =========================================================
    *
    * ✓   = sent
    * ✓✓  = delivered
    * ✓✓  = read
+   *
+   * Only the latest outgoing message displays the status.
    */
 
   let messageStatus = "✓";
@@ -37,6 +43,17 @@ export default function MessageBubble({
     messageStatus = "✓✓";
   }
 
+  /*
+   * =========================================================
+   * TIME
+   * =========================================================
+   */
+
+  const formattedTime = new Date(createdAt).toLocaleTimeString([], {
+    hour: "numeric",
+    minute: "2-digit",
+  });
+
   return (
     <div
       className={`flex w-full ${
@@ -45,68 +62,118 @@ export default function MessageBubble({
     >
       <div
         className={[
+          "group",
           "max-w-[82%]",
           "rounded-2xl",
-          "px-4 py-2.5",
-          "text-sm leading-5",
+          "px-3.5 py-2.5",
+          "text-sm",
+          "leading-5",
           "shadow-sm",
+          "backdrop-blur-md",
+          "transition-colors",
           "sm:max-w-[70%]",
+
+          /*
+           * =================================================
+           * MY MESSAGE
+           * =================================================
+           */
+
           isMine
             ? isDark
               ? [
                   "rounded-br-md",
-                  "bg-white",
-                  "text-black",
+                  "border border-white/[0.10]",
+                  "bg-white/[0.09]",
+                  "text-white",
+                  "shadow-black/20",
                 ].join(" ")
               : [
                   "rounded-br-md",
-                  "bg-white",
+                  "border border-black/[0.08]",
+                  "bg-black/[0.045]",
                   "text-black",
-                  "border border-black/[0.06]",
+                  "shadow-black/[0.04]",
                 ].join(" ")
+
+            /*
+             * =================================================
+             * OTHER USER MESSAGE
+             * =================================================
+             */
+
             : isDark
               ? [
                   "rounded-bl-md",
-                  "border border-white/[0.06]",
-                  "bg-[#181818]",
+                  "border border-white/[0.07]",
+                  "bg-white/[0.055]",
                   "text-white",
+                  "shadow-black/20",
                 ].join(" ")
               : [
                   "rounded-bl-md",
-                  "border border-black/[0.06]",
-                  "bg-white",
+                  "border border-black/[0.07]",
+                  "bg-black/[0.035]",
                   "text-black",
+                  "shadow-black/[0.035]",
                 ].join(" "),
         ].join(" ")}
       >
-        {/* MESSAGE */}
+        {/* MESSAGE TEXT */}
 
         <p className="whitespace-pre-wrap break-words">
           {text}
         </p>
 
-        {/* STATUS */}
+        {/* META */}
 
-        {isMine && isLatestOutgoingMessage && (
-          <div
-            className={[
-              "mt-1",
-              "flex justify-end",
-              "text-[10px]",
-              "font-medium",
-              "leading-none",
-              readAt
-                ? isDark
-                  ? "text-blue-500"
-                  : "text-blue-600"
-                : isDark
-                  ? "text-black/40"
-                  : "text-black/40",
-            ].join(" ")}
+        <div
+          className={[
+            "mt-1",
+            "flex",
+            "items-center",
+            "justify-end",
+            "gap-1.5",
+            "select-none",
+          ].join(" ")}
+        >
+          {/* TIME */}
+
+          <span
+            className={`text-[9px] font-medium leading-none ${
+              isDark ? "text-white/35" : "text-black/35"
+            }`}
           >
-            {messageStatus}
-          </div>
-        )}
+            {formattedTime}
+          </span>
+
+          {/* WHATSAPP-STYLE STATUS */}
+
+          {isMine && isLatestOutgoingMessage && (
+            <span
+              aria-label={
+                readAt
+                  ? "Read"
+                  : deliveredAt
+                    ? "Delivered"
+                    : "Sent"
+              }
+              className={[
+                "text-[10px]",
+                "font-semibold",
+                "leading-none",
+                "tracking-[-2px]",
+                readAt
+                  ? "text-blue-400"
+                  : isDark
+                    ? "text-white/45"
+                    : "text-black/40",
+              ].join(" ")}
+            >
+              {messageStatus}
+            </span>
+          )}
+        </div>
       </div>
     </div>
   );
