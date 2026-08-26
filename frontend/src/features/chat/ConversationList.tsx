@@ -2,20 +2,14 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuthStore } from "../auth/authStore";
 import { socket } from "../../services/socket";
-import {
-  getUsers,
-  createConversation,
-} from "../../services/api";
-import type {
-  Conversation,
-  ChatUser,
-} from "./chatStore";
+import { getUsers, createConversation } from "../../services/api";
+
+import type { Conversation, ChatUser } from "./chatStore";
+
 import { usePresenceStore } from "../presence/presenceStore";
 
 type ConversationListProps = {
-  onSelectConversation: (
-    conversation: Conversation,
-  ) => void;
+  onSelectConversation: (conversation: Conversation) => void;
   currentConversationId: string | null;
 };
 
@@ -39,30 +33,21 @@ export default function ConversationList({
   onSelectConversation,
   currentConversationId,
 }: ConversationListProps) {
-  const token = useAuthStore(
-    (state) => state.token,
-  );
-
-  const currentUser = useAuthStore(
-    (state) => state.user,
-  );
-
+  const token = useAuthStore((state) => state.token);
+  const currentUser = useAuthStore((state) => state.user);
   const onlineUserIds = usePresenceStore(
     (state) => state.onlineUserIds,
   );
 
-  const [conversations, setConversations] =
-    useState<Conversation[]>([]);
-
+  const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users, setUsers] = useState<ChatUser[]>([]);
   const [search, setSearch] = useState("");
 
   const [loading, setLoading] = useState(true);
-  const [usersLoading, setUsersLoading] =
-    useState(false);
-
-  const [startingChat, setStartingChat] =
-    useState<string | null>(null);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [startingChat, setStartingChat] = useState<string | null>(
+    null,
+  );
 
   /* =========================================================
      HELPERS
@@ -72,8 +57,7 @@ export default function ConversationList({
     conversation: Conversation,
   ): ChatUser | undefined => {
     return conversation.members.find(
-      (member) =>
-        member.user.id !== currentUser?.id,
+      (member) => member.user.id !== currentUser?.id,
     )?.user;
   };
 
@@ -95,78 +79,55 @@ export default function ConversationList({
   const normalizeConversations = (
     input: Conversation[],
   ): Conversation[] => {
-    const byConversationId = new Map<
-      string,
-      Conversation
-    >();
+    const byConversationId = new Map<string, Conversation>();
 
     for (const conversation of input) {
       if (!conversation?.id) continue;
 
       const normalized: Conversation = {
         ...conversation,
-        messages: [
-          ...(conversation.messages ?? []),
-        ].sort(
+        messages: [...(conversation.messages ?? [])].sort(
           (a, b) =>
             new Date(b.createdAt).getTime() -
             new Date(a.createdAt).getTime(),
         ),
       };
 
-      const existing =
-        byConversationId.get(conversation.id);
+      const existing = byConversationId.get(conversation.id);
 
       if (!existing) {
-        byConversationId.set(
-          conversation.id,
-          normalized,
-        );
+        byConversationId.set(conversation.id, normalized);
         continue;
       }
 
       const messageMap = new Map(
-        [
-          ...(existing.messages ?? []),
-          ...(normalized.messages ?? []),
-        ].map((message) => [
-          message.id,
-          message,
-        ]),
+        [...(existing.messages ?? []), ...(normalized.messages ?? [])].map(
+          (message) => [message.id, message],
+        ),
       );
 
-      byConversationId.set(
-        conversation.id,
-        {
-          ...existing,
-          ...normalized,
-          unreadCount: Math.max(
-            existing.unreadCount ?? 0,
-            normalized.unreadCount ?? 0,
-          ),
-          messages: [...messageMap.values()].sort(
-            (a, b) =>
-              new Date(b.createdAt).getTime() -
-              new Date(a.createdAt).getTime(),
-          ),
-        },
-      );
+      byConversationId.set(conversation.id, {
+        ...existing,
+        ...normalized,
+        unreadCount: Math.max(
+          existing.unreadCount ?? 0,
+          normalized.unreadCount ?? 0,
+        ),
+        messages: [...messageMap.values()].sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() -
+            new Date(a.createdAt).getTime(),
+        ),
+      });
     }
 
-    const byPair = new Map<
-      string,
-      Conversation
-    >();
+    const byPair = new Map<string, Conversation>();
 
     for (const conversation of byConversationId.values()) {
-      const pairKey =
-        getConversationPairKey(conversation);
+      const pairKey = getConversationPairKey(conversation);
 
       if (!pairKey) {
-        byPair.set(
-          `conversation:${conversation.id}`,
-          conversation,
-        );
+        byPair.set(`conversation:${conversation.id}`, conversation);
         continue;
       }
 
@@ -178,12 +139,10 @@ export default function ConversationList({
       }
 
       const existingLatest =
-        existing.messages?.[0]?.createdAt ??
-        existing.createdAt;
+        existing.messages?.[0]?.createdAt ?? existing.createdAt;
 
       const currentLatest =
-        conversation.messages?.[0]?.createdAt ??
-        conversation.createdAt;
+        conversation.messages?.[0]?.createdAt ?? conversation.createdAt;
 
       if (
         new Date(currentLatest).getTime() >
@@ -194,13 +153,8 @@ export default function ConversationList({
     }
 
     return [...byPair.values()].sort((a, b) => {
-      const aDate =
-        a.messages?.[0]?.createdAt ??
-        a.createdAt;
-
-      const bDate =
-        b.messages?.[0]?.createdAt ??
-        b.createdAt;
+      const aDate = a.messages?.[0]?.createdAt ?? a.createdAt;
+      const bDate = b.messages?.[0]?.createdAt ?? b.createdAt;
 
       return (
         new Date(bDate).getTime() -
@@ -239,28 +193,22 @@ export default function ConversationList({
 
         if (!response.ok) {
           throw new Error(
-            data.message ||
-              "Failed to fetch conversations",
+            data.message || "Failed to fetch conversations",
           );
         }
 
         if (cancelled) return;
 
-        const loaded: Conversation[] =
-          Array.isArray(data.conversations)
-            ? data.conversations
-            : [];
+        const loaded: Conversation[] = Array.isArray(
+          data.conversations,
+        )
+          ? data.conversations
+          : [];
 
-        setConversations(
-          normalizeConversations(loaded),
-        );
+        setConversations(normalizeConversations(loaded));
       } catch (error) {
         if (!cancelled) {
-          console.error(
-            "Fetch conversations error:",
-            error,
-          );
-
+          console.error("Fetch conversations error:", error);
           setConversations([]);
         }
       } finally {
@@ -296,17 +244,11 @@ export default function ConversationList({
         const data = await getUsers(token);
 
         if (!cancelled) {
-          setUsers(
-            Array.isArray(data) ? data : [],
-          );
+          setUsers(Array.isArray(data) ? data : []);
         }
       } catch (error) {
         if (!cancelled) {
-          console.error(
-            "Fetch users error:",
-            error,
-          );
-
+          console.error("Fetch users error:", error);
           setUsers([]);
         }
       } finally {
@@ -347,16 +289,13 @@ export default function ConversationList({
      ========================================================= */
 
   useEffect(() => {
-    const handleNewMessage = (
-      message: NewMessagePayload,
-    ) => {
+    const handleNewMessage = (message: NewMessagePayload) => {
       if (!message?.conversationId) return;
 
       setConversations((previous) => {
         const existing = previous.find(
           (conversation) =>
-            conversation.id ===
-            message.conversationId,
+            conversation.id === message.conversationId,
         );
 
         if (!existing) {
@@ -364,11 +303,9 @@ export default function ConversationList({
         }
 
         const isCurrent =
-          message.conversationId ===
-          currentConversationId;
+          message.conversationId === currentConversationId;
 
-        const isMine =
-          message.senderId === currentUser?.id;
+        const isMine = message.senderId === currentUser?.id;
 
         const unreadCount =
           isCurrent || isMine
@@ -377,21 +314,18 @@ export default function ConversationList({
 
         const nextMessage = {
           id: message.id,
-          conversationId:
-            message.conversationId,
+          conversationId: message.conversationId,
           senderId: message.senderId,
           text: message.text,
           createdAt: message.createdAt,
-          deliveredAt:
-            message.deliveredAt ?? null,
+          deliveredAt: message.deliveredAt ?? null,
           readAt: message.readAt ?? null,
         };
 
         const messages = [
           nextMessage,
           ...(existing.messages ?? []).filter(
-            (item) =>
-              item.id !== message.id,
+            (item) => item.id !== message.id,
           ),
         ];
 
@@ -405,28 +339,18 @@ export default function ConversationList({
           updated,
           ...previous.filter(
             (conversation) =>
-              conversation.id !==
-              message.conversationId,
+              conversation.id !== message.conversationId,
           ),
         ]);
       });
     };
 
-    socket.on(
-      "newMessage",
-      handleNewMessage,
-    );
+    socket.on("newMessage", handleNewMessage);
 
     return () => {
-      socket.off(
-        "newMessage",
-        handleNewMessage,
-      );
+      socket.off("newMessage", handleNewMessage);
     };
-  }, [
-    currentConversationId,
-    currentUser?.id,
-  ]);
+  }, [currentConversationId, currentUser?.id]);
 
   /* =========================================================
      READ RECEIPTS
@@ -444,47 +368,35 @@ export default function ConversationList({
         return;
       }
 
-      const messageIdSet = new Set(
-        payload.messageIds,
-      );
+      const messageIdSet = new Set(payload.messageIds);
 
       setConversations((previous) =>
         previous.map((conversation) => {
-          if (
-            conversation.id !==
-            payload.conversationId
-          ) {
+          if (conversation.id !== payload.conversationId) {
             return conversation;
           }
 
           return {
             ...conversation,
             unreadCount: 0,
-            messages: (
-              conversation.messages ?? []
-            ).map((message) =>
-              messageIdSet.has(message.id)
-                ? {
-                    ...message,
-                    readAt: payload.readAt,
-                  }
-                : message,
+            messages: (conversation.messages ?? []).map(
+              (message) =>
+                messageIdSet.has(message.id)
+                  ? {
+                      ...message,
+                      readAt: payload.readAt,
+                    }
+                  : message,
             ),
           };
         }),
       );
     };
 
-    socket.on(
-      "message:read",
-      handleMessageRead,
-    );
+    socket.on("message:read", handleMessageRead);
 
     return () => {
-      socket.off(
-        "message:read",
-        handleMessageRead,
-      );
+      socket.off("message:read", handleMessageRead);
     };
   }, []);
 
@@ -509,36 +421,29 @@ export default function ConversationList({
       ),
     );
 
-    onSelectConversation(
-      updatedConversation,
-    );
+    onSelectConversation(updatedConversation);
   };
 
   /* =========================================================
      START CHAT
      ========================================================= */
 
-  const handleStartChat = async (
-    user: ChatUser,
-  ) => {
+  const handleStartChat = async (user: ChatUser) => {
     if (!token || startingChat) return;
 
     try {
       setStartingChat(user.id);
 
-      const conversation =
-        await createConversation(
-          token,
-          user.id,
-        );
+      const conversation = await createConversation(
+        token,
+        user.id,
+      );
 
-      const normalizedConversation: Conversation =
-        {
-          ...conversation,
-          unreadCount: 0,
-          messages:
-            conversation.messages ?? [],
-        };
+      const normalizedConversation: Conversation = {
+        ...conversation,
+        unreadCount: 0,
+        messages: conversation.messages ?? [],
+      };
 
       setConversations((previous) =>
         normalizeConversations([
@@ -547,16 +452,11 @@ export default function ConversationList({
         ]),
       );
 
-      onSelectConversation(
-        normalizedConversation,
-      );
+      onSelectConversation(normalizedConversation);
 
       setSearch("");
     } catch (error) {
-      console.error(
-        "Start conversation error:",
-        error,
-      );
+      console.error("Start conversation error:", error);
     } finally {
       setStartingChat(null);
     }
@@ -567,27 +467,21 @@ export default function ConversationList({
      ========================================================= */
 
   const filteredUsers = useMemo(() => {
-    const query = search
-      .trim()
-      .toLowerCase();
+    const query = search.trim().toLowerCase();
 
-    if (!query) return [];
+    if (!query) {
+      return [];
+    }
 
-    const existingUserIds =
-      new Set<string>();
+    const existingUserIds = new Set<string>();
 
-    conversations.forEach(
-      (conversation) => {
-        const otherUser =
-          getOtherUser(conversation);
+    conversations.forEach((conversation) => {
+      const otherUser = getOtherUser(conversation);
 
-        if (otherUser) {
-          existingUserIds.add(
-            otherUser.id,
-          );
-        }
-      },
-    );
+      if (otherUser) {
+        existingUserIds.add(otherUser.id);
+      }
+    });
 
     return users
       .filter(
@@ -596,11 +490,8 @@ export default function ConversationList({
           !existingUserIds.has(user.id),
       )
       .filter((user) => {
-        const username =
-          user.username.toLowerCase();
-
-        const email =
-          user.email.toLowerCase();
+        const username = user.username.toLowerCase();
+        const email = user.email.toLowerCase();
 
         return (
           username.includes(query) ||
@@ -621,12 +512,10 @@ export default function ConversationList({
 
   if (loading) {
     return (
-      <div className="rtc-conversation-list">
-        <div className="rtc-muted-row">
-          <span className="rtc-spinner" />
-          <span>
-            Loading conversations...
-          </span>
+      <div className="flex h-full min-h-0 w-full items-center justify-center">
+        <div className="flex items-center gap-2.5 text-xs text-black/40 dark:text-white/40">
+          <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/10 border-t-black dark:border-white/10 dark:border-t-white" />
+          <span>Loading conversations...</span>
         </div>
       </div>
     );
@@ -637,25 +526,22 @@ export default function ConversationList({
      ========================================================= */
 
   return (
-    <div className="rtc-conversation-list">
-      {/* SEARCH */}
+    <div className="flex h-full min-h-0 w-full flex-col">
+      {/* =====================================================
+          SEARCH
+          ===================================================== */}
 
-      <div className="rtc-conversation-search">
-        <div className="rtc-search-wrapper">
+      <div className="relative shrink-0 border-b border-black/[0.06] p-4 dark:border-white/[0.06]">
+        <div className="relative">
           <svg
-            className="rtc-search-icon"
+            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/30 dark:text-white/30"
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
             strokeWidth="2"
             aria-hidden="true"
           >
-            <circle
-              cx="11"
-              cy="11"
-              r="7"
-            />
-
+            <circle cx="11" cy="11" r="7" />
             <path d="m20 20-3.5-3.5" />
           </svg>
 
@@ -667,7 +553,7 @@ export default function ConversationList({
             }
             placeholder="Search users..."
             autoComplete="off"
-            className="rtc-search-input"
+            className="h-10 w-full rounded-xl border border-black/[0.08] bg-black/[0.025] pl-10 pr-9 text-xs text-black outline-none transition placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04] dark:border-white/[0.08] dark:bg-white/[0.025] dark:text-white dark:placeholder:text-white/25 dark:focus:border-white/20 dark:focus:bg-white/[0.04]"
           />
 
           {search && (
@@ -675,219 +561,232 @@ export default function ConversationList({
               type="button"
               onClick={() => setSearch("")}
               aria-label="Clear search"
-              className="rtc-search-clear"
+              className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md border-0 bg-transparent text-base leading-none text-black/35 transition hover:bg-black/[0.06] hover:text-black/70 dark:text-white/35 dark:hover:bg-white/[0.06] dark:hover:text-white/70"
             >
               ×
             </button>
           )}
         </div>
 
+        {/* ===================================================
+            SEARCH RESULTS
+            =================================================== */}
+
         {search.trim() && (
-          <div className="rtc-search-results">
+          <div className="absolute left-3 right-3 top-[4.25rem] z-30 overflow-hidden rounded-xl border border-black/[0.08] bg-white shadow-xl shadow-black/10 dark:border-white/[0.08] dark:bg-[#151515] dark:shadow-black/40">
             {usersLoading ? (
-              <div className="rtc-muted-row">
-                <span className="rtc-spinner" />
-                <span>Searching...</span>
+              <div className="flex items-center gap-2 px-4 py-4 text-xs text-black/40 dark:text-white/40">
+                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/15 border-t-black dark:border-white/15 dark:border-t-white" />
+                Searching...
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="rtc-muted-row">
+              <div className="px-4 py-4 text-xs text-black/40 dark:text-white/40">
                 No users found
               </div>
             ) : (
-              filteredUsers.map((user) => {
-                const isOnline =
-                  onlineUserIds.includes(
-                    user.id,
-                  );
+              <div className="max-h-80 overflow-y-auto p-2">
+                {filteredUsers.map((user) => {
+                  const isOnline =
+                    onlineUserIds.includes(user.id);
 
-                return (
-                  <div
-                    key={user.id}
-                    className="rtc-search-user"
-                  >
-                    <div className="relative shrink-0">
-                      <div className="rtc-avatar rtc-avatar-search">
-                        {user.username
-                          .slice(0, 2)
-                          .toUpperCase()}
+                  return (
+                    <div
+                      key={user.id}
+                      className="flex items-center gap-3 rounded-lg p-2.5 transition hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+                    >
+                      <div className="relative shrink-0">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06] text-[10px] font-semibold text-black dark:bg-white/[0.08] dark:text-white">
+                          {user.username
+                            .slice(0, 2)
+                            .toUpperCase()}
+                        </div>
+
+                        <span
+                          className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-[#151515] ${
+                            isOnline
+                              ? "bg-emerald-500"
+                              : "bg-black/15 dark:bg-white/20"
+                          }`}
+                        />
                       </div>
 
-                      <span
-                        className={`rtc-status-dot ${
-                          isOnline
-                            ? "is-online"
-                            : ""
-                        }`}
-                      />
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-xs font-medium text-black dark:text-white">
+                          {user.username}
+                        </p>
+
+                        <p className="truncate text-[10px] text-black/40 dark:text-white/35">
+                          {user.email}
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleStartChat(user)
+                        }
+                        disabled={startingChat !== null}
+                        className="shrink-0 rounded-lg border-0 bg-black px-3 py-1.5 text-[10px] font-semibold text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-white/85"
+                      >
+                        {startingChat === user.id
+                          ? "..."
+                          : "Chat"}
+                      </button>
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <p className="rtc-user-name">
-                        {user.username}
-                      </p>
-
-                      <p className="rtc-user-email">
-                        {user.email}
-                      </p>
-                    </div>
-
-                    <button
-                      type="button"
-                      onClick={() =>
-                        handleStartChat(user)
-                      }
-                      disabled={
-                        startingChat !== null
-                      }
-                      className="rtc-small-button"
-                    >
-                      {startingChat ===
-                      user.id
-                        ? "..."
-                        : "Chat"}
-                    </button>
-                  </div>
-                );
-              })
+                  );
+                })}
+              </div>
             )}
           </div>
         )}
       </div>
 
-      {/* CONVERSATIONS */}
+      {/* =====================================================
+          CONVERSATIONS
+          ===================================================== */}
 
-      <div className="rtc-conversation-scroll">
+      <div className="min-h-0 flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
-          <div className="rtc-no-conversations">
-            <div className="rtc-empty-small-icon">
-              💬
+          <div className="flex h-full items-center justify-center px-6">
+            <div className="max-w-[220px] text-center">
+              <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-black/[0.04] text-lg dark:bg-white/[0.04]">
+                💬
+              </div>
+
+              <p className="text-xs font-semibold text-black dark:text-white">
+                No conversations yet
+              </p>
+
+              <p className="mt-1.5 text-[11px] leading-5 text-black/40 dark:text-white/35">
+                Search for someone above to start chatting.
+              </p>
             </div>
-
-            <p className="rtc-muted-title">
-              No conversations yet
-            </p>
-
-            <p className="rtc-muted-description">
-              Search for someone above to
-              start chatting.
-            </p>
           </div>
         ) : (
-          <div>
-            {conversations.map(
-              (conversation) => {
-                const otherUser =
-                  getOtherUser(
-                    conversation,
-                  );
+          <div className="p-2">
+            {conversations.map((conversation) => {
+              const otherUser =
+                getOtherUser(conversation);
 
-                if (!otherUser) return null;
+              if (!otherUser) {
+                return null;
+              }
 
-                const lastMessage =
-                  conversation.messages?.[0];
+              const lastMessage =
+                conversation.messages?.[0];
 
-                const isSelected =
-                  conversation.id ===
-                  currentConversationId;
+              const isSelected =
+                conversation.id ===
+                currentConversationId;
 
-                const isOnline =
-                  onlineUserIds.includes(
-                    otherUser.id,
-                  );
+              const isOnline =
+                onlineUserIds.includes(otherUser.id);
 
-                const unreadCount =
-                  conversation.unreadCount ?? 0;
+              const unreadCount =
+                conversation.unreadCount ?? 0;
 
-                return (
-                  <button
-                    key={conversation.id}
-                    type="button"
-                    onClick={() =>
-                      handleSelectConversation(
-                        conversation,
-                      )
-                    }
-                    className={`rtc-conversation-item ${
-                      isSelected
-                        ? "is-selected"
-                        : ""
-                    }`}
-                  >
-                    {isSelected && (
-                      <span className="rtc-selection-indicator" />
-                    )}
+              return (
+                <button
+                  key={conversation.id}
+                  type="button"
+                  onClick={() =>
+                    handleSelectConversation(
+                      conversation,
+                    )
+                  }
+                  className={`group relative flex w-full items-center gap-3 rounded-xl border-0 px-3 py-3 text-left transition ${
+                    isSelected
+                      ? "bg-black/[0.06] dark:bg-white/[0.07]"
+                      : "bg-transparent hover:bg-black/[0.035] dark:hover:bg-white/[0.035]"
+                  }`}
+                >
+                  {isSelected && (
+                    <span className="absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-black dark:bg-white" />
+                  )}
 
-                    <div className="relative shrink-0">
-                      <div
-                        className={`rtc-avatar ${
+                  {/* AVATAR */}
+
+                  <div className="relative shrink-0">
+                    <div
+                      className={`flex h-11 w-11 items-center justify-center rounded-full text-[11px] font-semibold ${
+                        isSelected
+                          ? "bg-black text-white dark:bg-white dark:text-black"
+                          : "bg-black/[0.06] text-black dark:bg-white/[0.08] dark:text-white"
+                      }`}
+                    >
+                      {otherUser.username
+                        .slice(0, 2)
+                        .toUpperCase()}
+                    </div>
+
+                    <span
+                      className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
+                        isSelected
+                          ? "border-[#f0f0f0] dark:border-[#191919]"
+                          : "border-white dark:border-[#101010]"
+                      } ${
+                        isOnline
+                          ? "bg-emerald-500"
+                          : "bg-black/15 dark:bg-white/20"
+                      }`}
+                    />
+                  </div>
+
+                  {/* CONTENT */}
+
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span
+                        className={`truncate text-xs font-semibold ${
                           isSelected
-                            ? "is-selected"
-                            : ""
+                            ? "text-black dark:text-white"
+                            : "text-black/80 dark:text-white/80"
                         }`}
                       >
-                        {otherUser.username
-                          .slice(0, 2)
-                          .toUpperCase()}
-                      </div>
+                        {otherUser.username}
+                      </span>
 
+                      {unreadCount > 0 && (
+                        <span className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-black px-1.5 py-0.5 text-[9px] font-bold text-white dark:bg-white dark:text-black">
+                          {unreadCount > 99
+                            ? "99+"
+                            : unreadCount}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-1 flex min-w-0 items-center gap-1.5">
                       <span
-                        className={`rtc-status-dot ${
+                        className={`shrink-0 text-[10px] font-medium ${
                           isOnline
-                            ? "is-online"
-                            : ""
+                            ? "text-emerald-500"
+                            : "text-black/30 dark:text-white/25"
                         }`}
-                      />
+                      >
+                        {isOnline
+                          ? "Online"
+                          : "Offline"}
+                      </span>
+
+                      <span className="shrink-0 text-[9px] text-black/20 dark:text-white/20">
+                        •
+                      </span>
+
+                      <p
+                        className={`truncate text-[10px] ${
+                          unreadCount > 0
+                            ? "font-medium text-black/70 dark:text-white/70"
+                            : "text-black/35 dark:text-white/30"
+                        }`}
+                      >
+                        {lastMessage?.text ||
+                          "No messages yet"}
+                      </p>
                     </div>
-
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-2">
-                        <span
-                          className={`rtc-conversation-name ${
-                            isSelected
-                              ? "is-selected"
-                              : ""
-                          }`}
-                        >
-                          {otherUser.username}
-                        </span>
-
-                        {unreadCount > 0 && (
-                          <span className="rtc-count-badge">
-                            {unreadCount >
-                            99
-                              ? "99+"
-                              : unreadCount}
-                          </span>
-                        )}
-                      </div>
-
-                      <div className="flex min-w-0 items-center gap-1.5">
-                        <span
-                          className={`rtc-conversation-status ${
-                            isOnline
-                              ? "is-online"
-                              : ""
-                          }`}
-                        >
-                          {isOnline
-                            ? "Online"
-                            : "Offline"}
-                        </span>
-
-                        <span className="rtc-separator">
-                          •
-                        </span>
-
-                        <p className="rtc-last-message">
-                          {lastMessage?.text ||
-                            "No messages yet"}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                );
-              },
-            )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
 import MessageInput from "./MessageInput";
 import ConversationList from "./ConversationList";
+import ChatMessages from "./ChatMessages";
 import { useChatStore } from "./chatStore";
 import { socket } from "../../services/socket";
 import TypingIndicator from "./TypingIndicator";
@@ -16,8 +17,6 @@ type User = {
   username: string;
   email: string;
 };
-
-type Theme = "dark" | "light";
 
 export default function ChatScreen() {
   const token = useAuthStore((state) => state.token);
@@ -38,6 +37,8 @@ export default function ChatScreen() {
   const setConversation = useChatStore((state) => state.setConversation);
   const setMessages = useChatStore((state) => state.setMessages);
 
+  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
+
   const [users, setUsers] = useState<User[]>([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   const [creatingConversation, setCreatingConversation] = useState(false);
@@ -49,55 +50,17 @@ export default function ChatScreen() {
     username: string;
   } | null>(null);
 
-  const [theme, setTheme] = useState<Theme>(() => {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
     return localStorage.getItem("rtc-theme") === "light" ? "light" : "dark";
   });
 
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
-
-  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
 
   const readReceiptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   );
 
   const lastReadReceiptSignatureRef = useRef<string | null>(null);
-
-  const unreadIncomingMessageIds = messages
-    .filter(
-      (message) =>
-        message.conversationId === currentConversationId &&
-        message.senderId !== currentUser?.id &&
-        !message.readAt,
-    )
-    .map((message) => message.id);
-
-  const unreadIncomingSignature =
-    unreadIncomingMessageIds.length > 0 && currentConversationId
-      ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
-      : null;
-
-  const startChatUsers = users.filter(
-    (user) => user.username === "dhillon2317" && user.id !== currentUser?.id,
-  );
-
-  const selectedUser =
-    currentConversation?.members.find(
-      (member) => member.user.id !== currentUser?.id,
-    )?.user ?? null;
-
-  const isSelectedUserOnline = selectedUser
-    ? onlineUserIds.includes(selectedUser.id)
-    : false;
-
-  const latestOutgoingMessageId =
-    [...messages]
-      .reverse()
-      .find((message) => message.senderId === currentUser?.id)?.id ?? null;
-
-  const isDark = theme === "dark";
 
   /* =========================================================
      THEME
@@ -106,6 +69,40 @@ export default function ChatScreen() {
   useEffect(() => {
     localStorage.setItem("rtc-theme", theme);
   }, [theme]);
+
+  const isDark = theme === "dark";
+
+  /* =========================================================
+     SELECTED USER
+     ========================================================= */
+
+  const selectedUser = currentConversation?.members.find(
+    (member) => member.user.id !== currentUser?.id,
+  )?.user;
+
+  const isSelectedUserOnline = selectedUser
+    ? onlineUserIds.includes(selectedUser.id)
+    : false;
+
+  /* =========================================================
+     UNREAD MESSAGES
+     ========================================================= */
+
+  const unreadIncomingMessageIds = useMemo(() => {
+    return messages
+      .filter(
+        (message) =>
+          message.conversationId === currentConversationId &&
+          message.senderId !== currentUser?.id &&
+          !message.readAt,
+      )
+      .map((message) => message.id);
+  }, [messages, currentConversationId, currentUser?.id]);
+
+  const unreadIncomingSignature =
+    unreadIncomingMessageIds.length > 0 && currentConversationId
+      ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
+      : null;
 
   /* =========================================================
      LOAD USERS
@@ -353,21 +350,9 @@ export default function ChatScreen() {
     return () => {
       socket.off("userTyping", handleUserTyping);
       socket.off("userStoppedTyping", handleUserStoppedTyping);
-
       setTypingUser(null);
     };
   }, [currentConversationId, currentUser?.id]);
-
-  /* =========================================================
-     AUTO SCROLL
-     ========================================================= */
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({
-      behavior: "smooth",
-      block: "end",
-    });
-  }, [messages]);
 
   /* =========================================================
      OPEN CONVERSATION
@@ -410,7 +395,9 @@ export default function ChatScreen() {
      ========================================================= */
 
   const startConversation = async (user: User) => {
-    if (!token || creatingConversation) return;
+    if (!token || creatingConversation) {
+      return;
+    }
 
     try {
       setCreatingConversation(true);
@@ -439,7 +426,7 @@ export default function ChatScreen() {
         throw new Error("Server returned no conversation");
       }
 
-      await openConversation(data.conversation);
+      openConversation(data.conversation);
     } catch (error) {
       console.error("Start conversation error:", error);
     } finally {
@@ -470,42 +457,63 @@ export default function ChatScreen() {
 
   return (
     <div
-      data-theme={theme}
-      className={`rtc-chat-shell ${
-        isDark ? "rtc-theme-dark" : "rtc-theme-light"
+      className={`h-[100dvh] w-full overflow-hidden transition-colors duration-200 ${
+        isDark ? "bg-[#070707] text-white" : "bg-[#f5f7fa] text-[#111827]"
       }`}
     >
       {/* HEADER */}
 
-      <header className="rtc-header">
+      <header
+        className={`fixed inset-x-0 top-0 z-50 flex h-16 items-center justify-between border-b px-4 sm:px-6 ${
+          isDark
+            ? "border-white/[0.08] bg-[#101010]"
+            : "border-black/[0.08] bg-white"
+        }`}
+      >
         <div className="flex min-w-0 items-center gap-3">
-          <div className="rtc-brand-mark">RT</div>
+          <div
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-xs font-bold tracking-[0.15em] ${
+              isDark ? "bg-white text-black" : "bg-black text-white"
+            }`}
+          >
+            RT
+          </div>
 
           <div className="min-w-0">
-            <h1 className="rtc-header-title">Real-Time Chat</h1>
+            <h1 className="truncate text-sm font-semibold tracking-tight sm:text-[15px]">
+              Real-Time Chat
+            </h1>
 
-            <p className="rtc-header-subtitle">Connected conversations</p>
+            <p
+              className={`hidden text-[11px] sm:block ${
+                isDark ? "text-white/40" : "text-black/40"
+              }`}
+            >
+              Connected conversations
+            </p>
           </div>
         </div>
 
-        <div className="rtc-header-actions">
-          {/* ADD FRIENDS */}
+        <div className="flex shrink-0 items-center gap-2">
           <button
             type="button"
             onClick={() => navigate("/friends")}
-            className="rtc-header-button rtc-friends-button"
             aria-label="Friends"
             title="Friends"
+            className={`relative flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all active:scale-[0.98] ${
+              isDark
+                ? "border-white/[0.08] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
+                : "border-black/[0.08] bg-black/[0.02] text-black/65 hover:bg-black/[0.05] hover:text-black"
+            }`}
           >
             <svg
-              className="rtc-friends-icon"
+              className="h-4 w-4"
               viewBox="0 0 24 24"
               fill="none"
               stroke="currentColor"
               strokeWidth="1.8"
               strokeLinecap="round"
               strokeLinejoin="round"
-              aria-hidden="true"
             >
               <path d="M15 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
               <circle cx="8.5" cy="7" r="4" />
@@ -513,16 +521,19 @@ export default function ChatScreen() {
               <path d="M21 11h-6" />
             </svg>
 
-            <span className="rtc-friends-button-text">Friends</span>
+            <span className="hidden sm:inline">Friends</span>
 
             {friendRequestCount > 0 && (
-              <span className="rtc-count-badge">
+              <span
+                className={`flex min-w-5 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                  isDark ? "bg-white text-black" : "bg-black text-white"
+                }`}
+              >
                 {friendRequestCount > 99 ? "99+" : friendRequestCount}
               </span>
             )}
           </button>
 
-          {/* THEME */}
           <button
             type="button"
             aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
@@ -530,11 +541,15 @@ export default function ChatScreen() {
             onClick={() =>
               setTheme((current) => (current === "dark" ? "light" : "dark"))
             }
-            className="rtc-header-button rtc-theme-button"
+            className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium transition-all active:scale-[0.98] ${
+              isDark
+                ? "border-white/[0.08] bg-white/[0.04] text-white/70 hover:bg-white/[0.08] hover:text-white"
+                : "border-black/[0.08] bg-black/[0.02] text-black/65 hover:bg-black/[0.05] hover:text-black"
+            }`}
           >
-            <span className="rtc-theme-icon">{isDark ? "☀" : "☾"}</span>
+            <span className="text-sm">{isDark ? "☀" : "☾"}</span>
 
-            <span className="rtc-theme-button-text">
+            <span className="hidden sm:inline">
               {isDark ? "Light" : "Dark"}
             </span>
           </button>
@@ -543,22 +558,49 @@ export default function ChatScreen() {
 
       {/* MAIN */}
 
-      <main className="rtc-main">
-        <div className="rtc-chat-frame">
+      <main className="h-[100dvh] w-full pt-16">
+        <div
+          className={`mx-auto flex h-[calc(100dvh-4rem)] w-full overflow-hidden sm:mt-4 sm:h-[calc(100dvh-5rem)] sm:max-w-[1500px] sm:rounded-2xl sm:border sm:shadow-2xl ${
+            isDark
+              ? "bg-[#101010] sm:border-white/[0.08]"
+              : "bg-white sm:border-black/[0.08]"
+          }`}
+        >
           {/* SIDEBAR */}
 
           <aside
-            className={`rtc-sidebar ${
-              mobileChatOpen ? "is-mobile-hidden" : ""
+            className={`min-w-0 flex-col overflow-hidden border-r ${
+              isDark ? "border-white/[0.08]" : "border-black/[0.08]"
+            }
+            ${
+              mobileChatOpen
+                ? "hidden md:flex"
+                : "flex w-full md:w-[330px] md:flex-none lg:w-[360px]"
             }`}
           >
-            <div className="rtc-sidebar-header">
-              <div>
-                <h2 className="rtc-section-title">Conversations</h2>
+            {/* SIDEBAR HEADER */}
 
-                <p className="rtc-section-subtitle">Your recent chats</p>
+            <div
+              className={`flex h-16 shrink-0 items-center border-b px-5 ${
+                isDark ? "border-white/[0.08]" : "border-black/[0.08]"
+              }`}
+            >
+              <div>
+                <h2 className="text-sm font-semibold">Conversations</h2>
+
+                <p
+                  className={`mt-0.5 text-[11px] ${
+                    isDark ? "text-white/40" : "text-black/40"
+                  }`}
+                >
+                  Your recent chats
+                </p>
               </div>
             </div>
+
+            {/* CONVERSATION LIST
+                This must be flex-1 + min-h-0 so scrolling works correctly.
+            */}
 
             <div className="min-h-0 flex-1 overflow-hidden">
               <ConversationList
@@ -569,55 +611,126 @@ export default function ChatScreen() {
 
             {/* QUICK CHAT */}
 
-            <div className="rtc-quick-chat">
+            <div
+              className={`hidden shrink-0 border-t p-4 md:block ${
+                isDark ? "border-white/[0.08]" : "border-black/[0.08]"
+              }`}
+            >
               <div className="mb-3 flex items-center justify-between">
-                <h3 className="rtc-eyebrow">Start a chat</h3>
+                <h3
+                  className={`text-[10px] font-semibold uppercase tracking-[0.16em] ${
+                    isDark ? "text-white/35" : "text-black/40"
+                  }`}
+                >
+                  Start a chat
+                </h3>
 
-                <span className="rtc-quick-label">Quick</span>
+                <span
+                  className={`rounded-md px-2 py-1 text-[9px] font-medium ${
+                    isDark
+                      ? "bg-white/[0.06] text-white/40"
+                      : "bg-black/[0.04] text-black/40"
+                  }`}
+                >
+                  Quick
+                </span>
               </div>
 
               {loadingUsers ? (
-                <div className="rtc-muted-row">
-                  <span className="rtc-spinner" />
+                <div
+                  className={`flex items-center gap-2 text-xs ${
+                    isDark ? "text-white/40" : "text-black/40"
+                  }`}
+                >
+                  <span
+                    className={`h-3.5 w-3.5 animate-spin rounded-full border-2 border-t-transparent ${
+                      isDark ? "border-white/20" : "border-black/20"
+                    }`}
+                  />
                   Loading users...
                 </div>
-              ) : startChatUsers.length === 0 ? (
-                <p className="rtc-muted-text">No other users found.</p>
               ) : (
-                <div className="space-y-2">
-                  {startChatUsers.map((user) => {
-                    const isOnline = onlineUserIds.includes(user.id);
+                (() => {
+                  const quickUsers = users.filter(
+                    (user) =>
+                      user.username === "dhillon2317" &&
+                      user.id !== currentUser?.id,
+                  );
 
+                  if (quickUsers.length === 0) {
                     return (
-                      <div key={user.id} className="rtc-quick-user">
-                        <div className="relative shrink-0">
-                          <div className="rtc-avatar rtc-avatar-small">
-                            {user.username.slice(0, 2).toUpperCase()}
-                          </div>
-
-                          <span
-                            className={`rtc-status-dot ${
-                              isOnline ? "is-online" : ""
-                            }`}
-                          />
-                        </div>
-
-                        <div className="min-w-0 flex-1">
-                          <p className="rtc-user-name">{user.username}</p>
-                        </div>
-
-                        <button
-                          type="button"
-                          onClick={() => startConversation(user)}
-                          disabled={creatingConversation}
-                          className="rtc-small-button"
-                        >
-                          {creatingConversation ? "..." : "Chat"}
-                        </button>
-                      </div>
+                      <p
+                        className={`text-xs ${
+                          isDark ? "text-white/40" : "text-black/40"
+                        }`}
+                      >
+                        No other users found.
+                      </p>
                     );
-                  })}
-                </div>
+                  }
+
+                  return (
+                    <div className="space-y-2">
+                      {quickUsers.map((user) => {
+                        const isOnline = onlineUserIds.includes(user.id);
+
+                        return (
+                          <div
+                            key={user.id}
+                            className={`flex items-center gap-3 rounded-xl border p-2.5 ${
+                              isDark
+                                ? "border-white/[0.06] bg-white/[0.02]"
+                                : "border-black/[0.06] bg-black/[0.015]"
+                            }`}
+                          >
+                            <div className="relative shrink-0">
+                              <div
+                                className={`flex h-9 w-9 items-center justify-center rounded-full text-[11px] font-semibold ${
+                                  isDark
+                                    ? "bg-white/10 text-white"
+                                    : "bg-black/5 text-black"
+                                }`}
+                              >
+                                {user.username.slice(0, 2).toUpperCase()}
+                              </div>
+
+                              <span
+                                className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
+                                  isDark ? "border-[#101010]" : "border-white"
+                                } ${
+                                  isOnline
+                                    ? "bg-emerald-500"
+                                    : isDark
+                                      ? "bg-white/20"
+                                      : "bg-black/15"
+                                }`}
+                              />
+                            </div>
+
+                            <div className="min-w-0 flex-1">
+                              <p className="truncate text-xs font-medium">
+                                {user.username}
+                              </p>
+                            </div>
+
+                            <button
+                              type="button"
+                              onClick={() => startConversation(user)}
+                              disabled={creatingConversation}
+                              className={`rounded-lg px-3 py-1.5 text-[10px] font-semibold transition-all active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-50 ${
+                                isDark
+                                  ? "bg-white text-black hover:bg-white/90"
+                                  : "bg-black text-white hover:bg-black/85"
+                              }`}
+                            >
+                              {creatingConversation ? "..." : "Chat"}
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()
               )}
             </div>
           </aside>
@@ -625,18 +738,30 @@ export default function ChatScreen() {
           {/* CHAT PANEL */}
 
           <section
-            className={`rtc-chat-panel ${
-              mobileChatOpen ? "is-mobile-visible" : "is-mobile-hidden"
+            className={`min-w-0 flex-1 flex-col overflow-hidden ${
+              mobileChatOpen ? "flex" : "hidden md:flex"
             }`}
           >
             {!selectedUser || !currentConversationId ? (
-              <div className="rtc-empty-state">
-                <div>
-                  <div className="rtc-empty-icon">💬</div>
+              <div className="flex min-h-0 flex-1 items-center justify-center p-8">
+                <div className="max-w-sm text-center">
+                  <div
+                    className={`mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl text-2xl ${
+                      isDark ? "bg-white/[0.05]" : "bg-black/[0.04]"
+                    }`}
+                  >
+                    💬
+                  </div>
 
-                  <h2 className="rtc-empty-title">Select a conversation</h2>
+                  <h2 className="text-base font-semibold">
+                    Select a conversation
+                  </h2>
 
-                  <p className="rtc-empty-description">
+                  <p
+                    className={`mt-2 text-sm leading-6 ${
+                      isDark ? "text-white/40" : "text-black/45"
+                    }`}
+                  >
                     Choose a conversation from the sidebar to start messaging in
                     real time.
                   </p>
@@ -646,123 +771,120 @@ export default function ChatScreen() {
               <>
                 {/* CHAT HEADER */}
 
-                <div className="rtc-chat-header">
+                <div
+                  className={`flex h-16 shrink-0 items-center border-b px-4 sm:px-5 ${
+                    isDark
+                      ? "border-white/[0.08] bg-[#101010]"
+                      : "border-black/[0.08] bg-white"
+                  }`}
+                >
                   <button
                     type="button"
-                    className="rtc-mobile-back"
                     onClick={closeMobileChat}
                     aria-label="Back to conversations"
+                    className={`mr-2 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-xl transition md:hidden ${
+                      isDark
+                        ? "text-white/50 hover:bg-white/[0.06] hover:text-white"
+                        : "text-black/50 hover:bg-black/[0.05] hover:text-black"
+                    }`}
                   >
                     ‹
                   </button>
 
                   <div className="relative mr-3 shrink-0">
-                    <div className="rtc-avatar">
+                    <div
+                      className={`flex h-10 w-10 items-center justify-center rounded-full text-xs font-semibold ${
+                        isDark
+                          ? "bg-white/10 text-white"
+                          : "bg-black/5 text-black"
+                      }`}
+                    >
                       {selectedUser.username.slice(0, 2).toUpperCase()}
                     </div>
 
                     <span
-                      className={`rtc-status-dot ${
-                        isSelectedUserOnline ? "is-online" : ""
+                      className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
+                        isDark ? "border-[#101010]" : "border-white"
+                      } ${
+                        isSelectedUserOnline
+                          ? "bg-emerald-500"
+                          : isDark
+                            ? "bg-white/20"
+                            : "bg-black/15"
                       }`}
                     />
                   </div>
 
                   <div className="min-w-0">
-                    <h2 className="rtc-chat-user">{selectedUser.username}</h2>
+                    <h2 className="truncate text-sm font-semibold">
+                      {selectedUser.username}
+                    </h2>
 
-                    <div
-                      className={`rtc-presence ${
-                        isSelectedUserOnline ? "is-online" : ""
-                      }`}
-                    >
-                      <span className="rtc-presence-dot" />
+                    <div className="mt-0.5 flex items-center gap-1.5">
+                      <span
+                        className={`h-1.5 w-1.5 rounded-full ${
+                          isSelectedUserOnline
+                            ? "bg-emerald-500"
+                            : isDark
+                              ? "bg-white/20"
+                              : "bg-black/20"
+                        }`}
+                      />
 
-                      {isSelectedUserOnline ? "Online" : "Offline"}
+                      <span
+                        className={`text-[10px] font-medium ${
+                          isSelectedUserOnline
+                            ? "text-emerald-500"
+                            : isDark
+                              ? "text-white/40"
+                              : "text-black/40"
+                        }`}
+                      >
+                        {isSelectedUserOnline ? "Online" : "Offline"}
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* MESSAGES */}
 
-                <div className="rtc-messages">
-                  {messages.length === 0 ? (
-                    <div className="flex h-full items-center justify-center">
-                      <div className="text-center">
-                        <div className="mb-3 text-2xl">👋</div>
-
-                        <p className="rtc-empty-message-title">
-                          No messages yet
-                        </p>
-
-                        <p className="rtc-empty-message-description">
-                          Say hello and start the conversation.
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="mx-auto flex max-w-4xl flex-col gap-2.5">
-                      {messages.map((message) => {
-                        const isMine = message.senderId === currentUser?.id;
-
-                        const isLatestOutgoingMessage =
-                          isMine && message.id === latestOutgoingMessageId;
-
-                        let messageStatus = "✓";
-
-                        if (message.deliveredAt) {
-                          messageStatus = "✓✓";
-                        }
-
-                        if (message.readAt) {
-                          messageStatus = "✓✓";
-                        }
-
-                        return (
-                          <div
-                            key={message.id}
-                            className={`flex ${
-                              isMine ? "justify-end" : "justify-start"
-                            }`}
-                          >
-                            <div
-                              className={`rtc-message ${
-                                isMine ? "is-mine" : "is-theirs"
-                              }`}
-                            >
-                              <p>{message.text}</p>
-
-                              {isLatestOutgoingMessage && (
-                                <div className="rtc-message-status">
-                                  <span
-                                    className={message.readAt ? "is-read" : ""}
-                                  >
-                                    {messageStatus}
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-                          </div>
-                        );
-                      })}
-
-                      <div ref={messagesEndRef} />
-                    </div>
-                  )}
+                <div
+                  className={`min-h-0 flex-1 overflow-y-auto ${
+                    isDark ? "bg-[#0b0b0b]" : "bg-[#fafafa]"
+                  }`}
+                >
+                  <ChatMessages
+                    messages={messages}
+                    currentUserId={currentUser?.id ?? ""}
+                  />
                 </div>
 
                 {/* TYPING */}
 
                 {typingUser && typingUser.userId !== currentUser?.id && (
-                  <div className="rtc-typing-bar">
-                    <TypingIndicator username={typingUser.username} />
+                  <div
+                    className={`shrink-0 border-t px-4 py-2 ${
+                      isDark
+                        ? "border-white/[0.08] bg-[#101010]"
+                        : "border-black/[0.08] bg-white"
+                    }`}
+                  >
+                    <div className="mx-auto max-w-4xl">
+                      <TypingIndicator username={typingUser.username} />
+                    </div>
                   </div>
                 )}
 
-                {/* COMPOSER */}
+                {/* MESSAGE INPUT */}
 
-                <div className="rtc-composer">
-                  <div className="mx-auto max-w-4xl">
+                <div
+                  className={`shrink-0 border-t p-3 sm:p-4 ${
+                    isDark
+                      ? "border-white/[0.08] bg-[#101010]"
+                      : "border-black/[0.08] bg-white"
+                  }`}
+                >
+                  <div className="mx-auto w-full max-w-4xl">
                     <MessageInput onSend={sendMessage} theme={theme} />
                   </div>
                 </div>
