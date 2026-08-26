@@ -59,14 +59,14 @@ export default function FriendList({
   if (friends.length === 0) {
     return (
       <div
-        className={`flex min-h-[300px] w-full flex-col items-center justify-center rounded-2xl border px-6 text-center ${
+        className={`flex min-h-[280px] w-full flex-col items-center justify-center rounded-2xl border px-6 text-center ${
           isDark
-            ? "border-white/[0.06] bg-white/[0.015]"
-            : "border-black/[0.06] bg-black/[0.015]"
+            ? "border-white/[0.06] bg-white/[0.012]"
+            : "border-black/[0.06] bg-black/[0.012]"
         }`}
       >
         <div
-          className={`mb-4 flex h-14 w-14 items-center justify-center rounded-2xl text-xl ${
+          className={`mb-4 flex h-12 w-12 items-center justify-center rounded-xl text-lg ${
             isDark
               ? "bg-white/[0.05]"
               : "bg-black/[0.04]"
@@ -83,7 +83,7 @@ export default function FriendList({
           <p
             className={`mt-2 max-w-xs text-xs leading-5 ${
               isDark
-                ? "text-white/40"
+                ? "text-white/35"
                 : "text-black/40"
             }`}
           >
@@ -96,27 +96,21 @@ export default function FriendList({
 
   /* =========================================================
      FRIEND GRID
-
-     IMPORTANT:
-     auto-fit + minmax allows the browser to determine the
-     correct number of columns based on the ACTUAL width
-     available from Friends.tsx.
      ========================================================= */
 
   return (
-    <div className="grid w-full min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
+    <div className="grid w-full min-w-0 grid-cols-1 gap-3 xl:grid-cols-2">
       {friends.map((friend) => {
-        const isOnline = onlineUserIds.includes(
-          friend.id,
-        );
+        const isOnline =
+          onlineUserIds.includes(friend.id);
 
         return (
           <div
             key={friend.id}
-            className={`min-w-0 overflow-hidden rounded-2xl border p-4 transition-all ${
+            className={`min-w-0 overflow-hidden rounded-xl border p-4 transition ${
               isDark
-                ? "border-white/[0.06] bg-white/[0.025] hover:border-white/[0.10] hover:bg-white/[0.045]"
-                : "border-black/[0.06] bg-black/[0.018] hover:border-black/[0.10] hover:bg-black/[0.035]"
+                ? "border-white/[0.06] bg-white/[0.02] hover:border-white/[0.10] hover:bg-white/[0.035]"
+                : "border-black/[0.06] bg-black/[0.015] hover:border-black/[0.10] hover:bg-black/[0.025]"
             }`}
           >
             {/* =================================================
@@ -171,19 +165,19 @@ export default function FriendList({
                   {friend.email}
                 </p>
 
-                <div
+                <p
                   className={`mt-1 text-[10px] font-medium ${
                     isOnline
                       ? "text-emerald-500"
                       : isDark
-                        ? "text-white/35"
+                        ? "text-white/30"
                         : "text-black/35"
                   }`}
                 >
                   {isOnline
                     ? "Online"
                     : "Offline"}
-                </div>
+                </p>
               </div>
             </div>
 
@@ -209,7 +203,7 @@ export default function FriendList({
                 onClick={() =>
                   onMessage(friend)
                 }
-                className={`min-w-0 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all active:scale-[0.97] ${
+                className={`min-w-0 rounded-lg px-3 py-2.5 text-xs font-semibold transition active:scale-[0.97] ${
                   isDark
                     ? "bg-white text-black hover:bg-white/90"
                     : "bg-black text-white hover:bg-black/85"
@@ -223,10 +217,10 @@ export default function FriendList({
                 onClick={() =>
                   onRemove(friend)
                 }
-                className={`min-w-0 rounded-lg border px-3 py-2.5 text-xs font-medium transition-all active:scale-[0.97] ${
+                className={`min-w-0 rounded-lg border px-3 py-2.5 text-xs font-medium transition active:scale-[0.97] ${
                   isDark
-                    ? "border-white/[0.08] bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
-                    : "border-black/[0.08] bg-black/[0.02] text-black/70 hover:bg-black/[0.05] hover:text-black"
+                    ? "border-white/[0.08] bg-white/[0.03] text-white/65 hover:bg-white/[0.07] hover:text-white"
+                    : "border-black/[0.08] bg-black/[0.02] text-black/65 hover:bg-black/[0.05] hover:text-black"
                 }`}
               >
                 Remove
