@@ -606,6 +606,7 @@ export default function ChatScreen() {
               <ConversationList
                 onSelectConversation={openConversation}
                 currentConversationId={currentConversationId}
+                theme={theme}
               />
             </div>
 

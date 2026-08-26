@@ -11,6 +11,7 @@ import { usePresenceStore } from "../presence/presenceStore";
 type ConversationListProps = {
   onSelectConversation: (conversation: Conversation) => void;
   currentConversationId: string | null;
+  theme: "dark" | "light";
 };
 
 type NewMessagePayload = {
@@ -32,12 +33,14 @@ type MessageReadPayload = {
 export default function ConversationList({
   onSelectConversation,
   currentConversationId,
+  theme,
 }: ConversationListProps) {
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
-  const onlineUserIds = usePresenceStore(
-    (state) => state.onlineUserIds,
-  );
+
+  const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
+
+  const isDark = theme === "dark";
 
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [users, setUsers] = useState<ChatUser[]>([]);
@@ -45,17 +48,13 @@ export default function ConversationList({
 
   const [loading, setLoading] = useState(true);
   const [usersLoading, setUsersLoading] = useState(false);
-  const [startingChat, setStartingChat] = useState<string | null>(
-    null,
-  );
+  const [startingChat, setStartingChat] = useState<string | null>(null);
 
   /* =========================================================
      HELPERS
      ========================================================= */
 
-  const getOtherUser = (
-    conversation: Conversation,
-  ): ChatUser | undefined => {
+  const getOtherUser = (conversation: Conversation): ChatUser | undefined => {
     return conversation.members.find(
       (member) => member.user.id !== currentUser?.id,
     )?.user;
@@ -76,9 +75,7 @@ export default function ConversationList({
     return `${memberIds[0]}:${memberIds[1]}`;
   };
 
-  const normalizeConversations = (
-    input: Conversation[],
-  ): Conversation[] => {
+  const normalizeConversations = (input: Conversation[]): Conversation[] => {
     const byConversationId = new Map<string, Conversation>();
 
     for (const conversation of input) {
@@ -88,8 +85,7 @@ export default function ConversationList({
         ...conversation,
         messages: [...(conversation.messages ?? [])].sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() -
-            new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         ),
       };
 
@@ -115,8 +111,7 @@ export default function ConversationList({
         ),
         messages: [...messageMap.values()].sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() -
-            new Date(a.createdAt).getTime(),
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         ),
       });
     }
@@ -145,8 +140,7 @@ export default function ConversationList({
         conversation.messages?.[0]?.createdAt ?? conversation.createdAt;
 
       if (
-        new Date(currentLatest).getTime() >
-        new Date(existingLatest).getTime()
+        new Date(currentLatest).getTime() > new Date(existingLatest).getTime()
       ) {
         byPair.set(pairKey, conversation);
       }
@@ -156,10 +150,7 @@ export default function ConversationList({
       const aDate = a.messages?.[0]?.createdAt ?? a.createdAt;
       const bDate = b.messages?.[0]?.createdAt ?? b.createdAt;
 
-      return (
-        new Date(bDate).getTime() -
-        new Date(aDate).getTime()
-      );
+      return new Date(bDate).getTime() - new Date(aDate).getTime();
     });
   };
 
@@ -192,16 +183,12 @@ export default function ConversationList({
         const data = await response.json();
 
         if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch conversations",
-          );
+          throw new Error(data.message || "Failed to fetch conversations");
         }
 
         if (cancelled) return;
 
-        const loaded: Conversation[] = Array.isArray(
-          data.conversations,
-        )
+        const loaded: Conversation[] = Array.isArray(data.conversations)
           ? data.conversations
           : [];
 
@@ -294,23 +281,19 @@ export default function ConversationList({
 
       setConversations((previous) => {
         const existing = previous.find(
-          (conversation) =>
-            conversation.id === message.conversationId,
+          (conversation) => conversation.id === message.conversationId,
         );
 
         if (!existing) {
           return previous;
         }
 
-        const isCurrent =
-          message.conversationId === currentConversationId;
+        const isCurrent = message.conversationId === currentConversationId;
 
         const isMine = message.senderId === currentUser?.id;
 
         const unreadCount =
-          isCurrent || isMine
-            ? 0
-            : (existing.unreadCount ?? 0) + 1;
+          isCurrent || isMine ? 0 : (existing.unreadCount ?? 0) + 1;
 
         const nextMessage = {
           id: message.id,
@@ -324,9 +307,7 @@ export default function ConversationList({
 
         const messages = [
           nextMessage,
-          ...(existing.messages ?? []).filter(
-            (item) => item.id !== message.id,
-          ),
+          ...(existing.messages ?? []).filter((item) => item.id !== message.id),
         ];
 
         const updated: Conversation = {
@@ -338,8 +319,7 @@ export default function ConversationList({
         return normalizeConversations([
           updated,
           ...previous.filter(
-            (conversation) =>
-              conversation.id !== message.conversationId,
+            (conversation) => conversation.id !== message.conversationId,
           ),
         ]);
       });
@@ -357,9 +337,7 @@ export default function ConversationList({
      ========================================================= */
 
   useEffect(() => {
-    const handleMessageRead = (
-      payload: MessageReadPayload,
-    ) => {
+    const handleMessageRead = (payload: MessageReadPayload) => {
       if (
         !payload?.conversationId ||
         !Array.isArray(payload.messageIds) ||
@@ -379,14 +357,13 @@ export default function ConversationList({
           return {
             ...conversation,
             unreadCount: 0,
-            messages: (conversation.messages ?? []).map(
-              (message) =>
-                messageIdSet.has(message.id)
-                  ? {
-                      ...message,
-                      readAt: payload.readAt,
-                    }
-                  : message,
+            messages: (conversation.messages ?? []).map((message) =>
+              messageIdSet.has(message.id)
+                ? {
+                    ...message,
+                    readAt: payload.readAt,
+                  }
+                : message,
             ),
           };
         }),
@@ -404,9 +381,7 @@ export default function ConversationList({
      SELECT
      ========================================================= */
 
-  const handleSelectConversation = (
-    conversation: Conversation,
-  ) => {
+  const handleSelectConversation = (conversation: Conversation) => {
     const updatedConversation: Conversation = {
       ...conversation,
       unreadCount: 0,
@@ -415,9 +390,7 @@ export default function ConversationList({
 
     setConversations((previous) =>
       previous.map((item) =>
-        item.id === conversation.id
-          ? updatedConversation
-          : item,
+        item.id === conversation.id ? updatedConversation : item,
       ),
     );
 
@@ -434,10 +407,7 @@ export default function ConversationList({
     try {
       setStartingChat(user.id);
 
-      const conversation = await createConversation(
-        token,
-        user.id,
-      );
+      const conversation = await createConversation(token, user.id);
 
       const normalizedConversation: Conversation = {
         ...conversation,
@@ -446,10 +416,7 @@ export default function ConversationList({
       };
 
       setConversations((previous) =>
-        normalizeConversations([
-          normalizedConversation,
-          ...previous,
-        ]),
+        normalizeConversations([normalizedConversation, ...previous]),
       );
 
       onSelectConversation(normalizedConversation);
@@ -485,26 +452,16 @@ export default function ConversationList({
 
     return users
       .filter(
-        (user) =>
-          user.id !== currentUser?.id &&
-          !existingUserIds.has(user.id),
+        (user) => user.id !== currentUser?.id && !existingUserIds.has(user.id),
       )
       .filter((user) => {
         const username = user.username.toLowerCase();
         const email = user.email.toLowerCase();
 
-        return (
-          username.includes(query) ||
-          email.includes(query)
-        );
+        return username.includes(query) || email.includes(query);
       })
       .slice(0, 8);
-  }, [
-    conversations,
-    currentUser?.id,
-    search,
-    users,
-  ]);
+  }, [conversations, currentUser?.id, search, users]);
 
   /* =========================================================
      LOADING
@@ -513,8 +470,16 @@ export default function ConversationList({
   if (loading) {
     return (
       <div className="flex h-full min-h-0 w-full items-center justify-center">
-        <div className="flex items-center gap-2.5 text-xs text-black/40 dark:text-white/40">
-          <span className="h-4 w-4 animate-spin rounded-full border-2 border-black/10 border-t-black dark:border-white/10 dark:border-t-white" />
+        <div
+          className={`flex items-center gap-2.5 text-xs ${
+            isDark ? "text-white/40" : "text-black/40"
+          }`}
+        >
+          <span
+            className={`h-4 w-4 animate-spin rounded-full border-2 border-t-transparent ${
+              isDark ? "border-white/20" : "border-black/15"
+            }`}
+          />
           <span>Loading conversations...</span>
         </div>
       </div>
@@ -527,14 +492,18 @@ export default function ConversationList({
 
   return (
     <div className="flex h-full min-h-0 w-full flex-col">
-      {/* =====================================================
-          SEARCH
-          ===================================================== */}
+      {/* SEARCH */}
 
-      <div className="relative shrink-0 border-b border-black/[0.06] p-4 dark:border-white/[0.06]">
+      <div
+        className={`relative shrink-0 border-b p-4 ${
+          isDark ? "border-white/[0.06]" : "border-black/[0.06]"
+        }`}
+      >
         <div className="relative">
           <svg
-            className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-black/30 dark:text-white/30"
+            className={`pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 ${
+              isDark ? "text-white/30" : "text-black/30"
+            }`}
             viewBox="0 0 24 24"
             fill="none"
             stroke="currentColor"
@@ -548,12 +517,14 @@ export default function ConversationList({
           <input
             type="text"
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            onChange={(event) => setSearch(event.target.value)}
             placeholder="Search users..."
             autoComplete="off"
-            className="h-10 w-full rounded-xl border border-black/[0.08] bg-black/[0.025] pl-10 pr-9 text-xs text-black outline-none transition placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04] dark:border-white/[0.08] dark:bg-white/[0.025] dark:text-white dark:placeholder:text-white/25 dark:focus:border-white/20 dark:focus:bg-white/[0.04]"
+            className={`h-10 w-full rounded-xl border pl-10 pr-9 text-xs outline-none transition ${
+              isDark
+                ? "border-white/[0.08] bg-white/[0.025] text-white placeholder:text-white/25 focus:border-white/20 focus:bg-white/[0.04]"
+                : "border-black/[0.08] bg-black/[0.025] text-black placeholder:text-black/30 focus:border-black/20 focus:bg-black/[0.04]"
+            }`}
           />
 
           {search && (
@@ -561,76 +532,96 @@ export default function ConversationList({
               type="button"
               onClick={() => setSearch("")}
               aria-label="Clear search"
-              className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md border-0 bg-transparent text-base leading-none text-black/35 transition hover:bg-black/[0.06] hover:text-black/70 dark:text-white/35 dark:hover:bg-white/[0.06] dark:hover:text-white/70"
+              className={`absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-md text-base leading-none transition ${
+                isDark
+                  ? "text-white/35 hover:bg-white/[0.06] hover:text-white/70"
+                  : "text-black/35 hover:bg-black/[0.06] hover:text-black/70"
+              }`}
             >
               ×
             </button>
           )}
         </div>
 
-        {/* ===================================================
-            SEARCH RESULTS
-            =================================================== */}
+        {/* SEARCH RESULTS */}
 
         {search.trim() && (
-          <div className="absolute left-3 right-3 top-[4.25rem] z-30 overflow-hidden rounded-xl border border-black/[0.08] bg-white shadow-xl shadow-black/10 dark:border-white/[0.08] dark:bg-[#151515] dark:shadow-black/40">
+          <div
+            className={`absolute left-3 right-3 top-[4.25rem] z-30 overflow-hidden rounded-xl border shadow-xl ${
+              isDark
+                ? "border-white/[0.08] bg-[#151515] shadow-black/40"
+                : "border-black/[0.08] bg-white shadow-black/10"
+            }`}
+          >
             {usersLoading ? (
-              <div className="flex items-center gap-2 px-4 py-4 text-xs text-black/40 dark:text-white/40">
-                <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-black/15 border-t-black dark:border-white/15 dark:border-t-white" />
+              <div
+                className={`flex items-center gap-2 px-4 py-4 text-xs ${
+                  isDark ? "text-white/40" : "text-black/40"
+                }`}
+              >
                 Searching...
               </div>
             ) : filteredUsers.length === 0 ? (
-              <div className="px-4 py-4 text-xs text-black/40 dark:text-white/40">
+              <div
+                className={`px-4 py-4 text-xs ${
+                  isDark ? "text-white/40" : "text-black/40"
+                }`}
+              >
                 No users found
               </div>
             ) : (
               <div className="max-h-80 overflow-y-auto p-2">
                 {filteredUsers.map((user) => {
-                  const isOnline =
-                    onlineUserIds.includes(user.id);
+                  const isOnline = onlineUserIds.includes(user.id);
 
                   return (
                     <div
                       key={user.id}
-                      className="flex items-center gap-3 rounded-lg p-2.5 transition hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+                      className={`flex items-center gap-3 rounded-lg p-2.5 transition ${
+                        isDark
+                          ? "hover:bg-white/[0.05]"
+                          : "hover:bg-black/[0.04]"
+                      }`}
                     >
-                      <div className="relative shrink-0">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-black/[0.06] text-[10px] font-semibold text-black dark:bg-white/[0.08] dark:text-white">
-                          {user.username
-                            .slice(0, 2)
-                            .toUpperCase()}
-                        </div>
-
-                        <span
-                          className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 border-white dark:border-[#151515] ${
-                            isOnline
-                              ? "bg-emerald-500"
-                              : "bg-black/15 dark:bg-white/20"
-                          }`}
-                        />
+                      <div
+                        className={`flex h-9 w-9 items-center justify-center rounded-full text-[10px] font-semibold ${
+                          isDark
+                            ? "bg-white/[0.08] text-white"
+                            : "bg-black/[0.06] text-black"
+                        }`}
+                      >
+                        {user.username.slice(0, 2).toUpperCase()}
                       </div>
 
                       <div className="min-w-0 flex-1">
-                        <p className="truncate text-xs font-medium text-black dark:text-white">
+                        <p
+                          className={`truncate text-xs font-medium ${
+                            isDark ? "text-white" : "text-black"
+                          }`}
+                        >
                           {user.username}
                         </p>
 
-                        <p className="truncate text-[10px] text-black/40 dark:text-white/35">
+                        <p
+                          className={`truncate text-[10px] ${
+                            isDark ? "text-white/35" : "text-black/40"
+                          }`}
+                        >
                           {user.email}
                         </p>
                       </div>
 
                       <button
                         type="button"
-                        onClick={() =>
-                          handleStartChat(user)
-                        }
+                        onClick={() => handleStartChat(user)}
                         disabled={startingChat !== null}
-                        className="shrink-0 rounded-lg border-0 bg-black px-3 py-1.5 text-[10px] font-semibold text-white transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-black dark:hover:bg-white/85"
+                        className={`shrink-0 rounded-lg px-3 py-1.5 text-[10px] font-semibold transition disabled:cursor-not-allowed disabled:opacity-40 ${
+                          isDark
+                            ? "bg-white text-black hover:bg-white/85"
+                            : "bg-black text-white hover:bg-black/80"
+                        }`}
                       >
-                        {startingChat === user.id
-                          ? "..."
-                          : "Chat"}
+                        {startingChat === user.id ? "..." : "Chat"}
                       </button>
                     </div>
                   );
@@ -641,67 +632,73 @@ export default function ConversationList({
         )}
       </div>
 
-      {/* =====================================================
-          CONVERSATIONS
-          ===================================================== */}
+      {/* CONVERSATIONS */}
 
-      <div className="min-h-0 flex-1 overflow-y-auto">
+      <div className="min-h-0 flex-1 overflow-y-auto p-2">
         {conversations.length === 0 ? (
           <div className="flex h-full items-center justify-center px-6">
             <div className="max-w-[220px] text-center">
-              <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-black/[0.04] text-lg dark:bg-white/[0.04]">
+              <div
+                className={`mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl text-lg ${
+                  isDark ? "bg-white/[0.04]" : "bg-black/[0.04]"
+                }`}
+              >
                 💬
               </div>
 
-              <p className="text-xs font-semibold text-black dark:text-white">
+              <p
+                className={`text-xs font-semibold ${
+                  isDark ? "text-white" : "text-black"
+                }`}
+              >
                 No conversations yet
               </p>
 
-              <p className="mt-1.5 text-[11px] leading-5 text-black/40 dark:text-white/35">
+              <p
+                className={`mt-1.5 text-[11px] leading-5 ${
+                  isDark ? "text-white/35" : "text-black/40"
+                }`}
+              >
                 Search for someone above to start chatting.
               </p>
             </div>
           </div>
         ) : (
-          <div className="p-2">
+          <div>
             {conversations.map((conversation) => {
-              const otherUser =
-                getOtherUser(conversation);
+              const otherUser = getOtherUser(conversation);
 
-              if (!otherUser) {
-                return null;
-              }
+              if (!otherUser) return null;
 
-              const lastMessage =
-                conversation.messages?.[0];
+              const lastMessage = conversation.messages?.[0];
 
-              const isSelected =
-                conversation.id ===
-                currentConversationId;
+              const isSelected = conversation.id === currentConversationId;
 
-              const isOnline =
-                onlineUserIds.includes(otherUser.id);
+              const isOnline = onlineUserIds.includes(otherUser.id);
 
-              const unreadCount =
-                conversation.unreadCount ?? 0;
+              const unreadCount = conversation.unreadCount ?? 0;
 
               return (
                 <button
                   key={conversation.id}
                   type="button"
-                  onClick={() =>
-                    handleSelectConversation(
-                      conversation,
-                    )
-                  }
-                  className={`group relative flex w-full items-center gap-3 rounded-xl border-0 px-3 py-3 text-left transition ${
+                  onClick={() => handleSelectConversation(conversation)}
+                  className={`group relative flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition ${
                     isSelected
-                      ? "bg-black/[0.06] dark:bg-white/[0.07]"
-                      : "bg-transparent hover:bg-black/[0.035] dark:hover:bg-white/[0.035]"
+                      ? isDark
+                        ? "bg-white/[0.07]"
+                        : "bg-black/[0.06]"
+                      : isDark
+                        ? "hover:bg-white/[0.035]"
+                        : "hover:bg-black/[0.035]"
                   }`}
                 >
                   {isSelected && (
-                    <span className="absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full bg-black dark:bg-white" />
+                    <span
+                      className={`absolute left-0 top-1/2 h-7 w-0.5 -translate-y-1/2 rounded-full ${
+                        isDark ? "bg-white" : "bg-black"
+                      }`}
+                    />
                   )}
 
                   {/* AVATAR */}
@@ -710,24 +707,26 @@ export default function ConversationList({
                     <div
                       className={`flex h-11 w-11 items-center justify-center rounded-full text-[11px] font-semibold ${
                         isSelected
-                          ? "bg-black text-white dark:bg-white dark:text-black"
-                          : "bg-black/[0.06] text-black dark:bg-white/[0.08] dark:text-white"
+                          ? isDark
+                            ? "bg-white text-black"
+                            : "bg-black text-white"
+                          : isDark
+                            ? "bg-white/[0.08] text-white"
+                            : "bg-black/[0.06] text-black"
                       }`}
                     >
-                      {otherUser.username
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      {otherUser.username.slice(0, 2).toUpperCase()}
                     </div>
 
                     <span
                       className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
-                        isSelected
-                          ? "border-[#f0f0f0] dark:border-[#191919]"
-                          : "border-white dark:border-[#101010]"
+                        isDark ? "border-[#101010]" : "border-white"
                       } ${
                         isOnline
                           ? "bg-emerald-500"
-                          : "bg-black/15 dark:bg-white/20"
+                          : isDark
+                            ? "bg-white/20"
+                            : "bg-black/15"
                       }`}
                     />
                   </div>
@@ -738,19 +737,27 @@ export default function ConversationList({
                     <div className="flex items-center justify-between gap-2">
                       <span
                         className={`truncate text-xs font-semibold ${
-                          isSelected
-                            ? "text-black dark:text-white"
-                            : "text-black/80 dark:text-white/80"
+                          isDark
+                            ? isSelected
+                              ? "text-white"
+                              : "text-white/80"
+                            : isSelected
+                              ? "text-black"
+                              : "text-black/80"
                         }`}
                       >
                         {otherUser.username}
                       </span>
 
                       {unreadCount > 0 && (
-                        <span className="flex min-w-5 shrink-0 items-center justify-center rounded-full bg-black px-1.5 py-0.5 text-[9px] font-bold text-white dark:bg-white dark:text-black">
-                          {unreadCount > 99
-                            ? "99+"
-                            : unreadCount}
+                        <span
+                          className={`flex min-w-5 shrink-0 items-center justify-center rounded-full px-1.5 py-0.5 text-[9px] font-bold ${
+                            isDark
+                              ? "bg-white text-black"
+                              : "bg-black text-white"
+                          }`}
+                        >
+                          {unreadCount > 99 ? "99+" : unreadCount}
                         </span>
                       )}
                     </div>
@@ -760,27 +767,34 @@ export default function ConversationList({
                         className={`shrink-0 text-[10px] font-medium ${
                           isOnline
                             ? "text-emerald-500"
-                            : "text-black/30 dark:text-white/25"
+                            : isDark
+                              ? "text-white/25"
+                              : "text-black/30"
                         }`}
                       >
-                        {isOnline
-                          ? "Online"
-                          : "Offline"}
+                        {isOnline ? "Online" : "Offline"}
                       </span>
 
-                      <span className="shrink-0 text-[9px] text-black/20 dark:text-white/20">
+                      <span
+                        className={`shrink-0 text-[9px] ${
+                          isDark ? "text-white/20" : "text-black/20"
+                        }`}
+                      >
                         •
                       </span>
 
                       <p
                         className={`truncate text-[10px] ${
                           unreadCount > 0
-                            ? "font-medium text-black/70 dark:text-white/70"
-                            : "text-black/35 dark:text-white/30"
+                            ? isDark
+                              ? "font-medium text-white/70"
+                              : "font-medium text-black/70"
+                            : isDark
+                              ? "text-white/30"
+                              : "text-black/35"
                         }`}
                       >
-                        {lastMessage?.text ||
-                          "No messages yet"}
+                        {lastMessage?.text || "No messages yet"}
                       </p>
                     </div>
                   </div>
