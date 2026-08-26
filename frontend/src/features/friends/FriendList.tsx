@@ -17,16 +17,18 @@ export default function FriendList({
   friends,
   onMessage,
   onRemove,
-
   loading = false,
   isDark = true,
-
   emptyTitle = "No friends yet.",
   emptySubtitle,
 }: FriendListProps) {
   const onlineUserIds = usePresenceStore(
     (state) => state.onlineUserIds,
   );
+
+  /* =========================================================
+     LOADING
+     ========================================================= */
 
   if (loading) {
     return (
@@ -50,10 +52,14 @@ export default function FriendList({
     );
   }
 
+  /* =========================================================
+     EMPTY STATE
+     ========================================================= */
+
   if (friends.length === 0) {
     return (
       <div
-        className={`flex min-h-[300px] flex-col items-center justify-center rounded-2xl border px-6 text-center ${
+        className={`flex min-h-[300px] w-full flex-col items-center justify-center rounded-2xl border px-6 text-center ${
           isDark
             ? "border-white/[0.06] bg-white/[0.015]"
             : "border-black/[0.06] bg-black/[0.015]"
@@ -88,8 +94,17 @@ export default function FriendList({
     );
   }
 
+  /* =========================================================
+     FRIEND GRID
+
+     IMPORTANT:
+     auto-fit + minmax allows the browser to determine the
+     correct number of columns based on the ACTUAL width
+     available from Friends.tsx.
+     ========================================================= */
+
   return (
-    <div className="space-y-3">
+    <div className="grid w-full min-w-0 gap-4 [grid-template-columns:repeat(auto-fit,minmax(280px,1fr))]">
       {friends.map((friend) => {
         const isOnline = onlineUserIds.includes(
           friend.id,
@@ -98,12 +113,16 @@ export default function FriendList({
         return (
           <div
             key={friend.id}
-            className={`flex flex-col gap-4 rounded-xl border p-4 transition-all sm:flex-row sm:items-center sm:justify-between ${
+            className={`min-w-0 overflow-hidden rounded-2xl border p-4 transition-all ${
               isDark
-                ? "border-white/[0.06] bg-white/[0.025] hover:bg-white/[0.045]"
-                : "border-black/[0.06] bg-black/[0.02] hover:bg-black/[0.035]"
+                ? "border-white/[0.06] bg-white/[0.025] hover:border-white/[0.10] hover:bg-white/[0.045]"
+                : "border-black/[0.06] bg-black/[0.018] hover:border-black/[0.10] hover:bg-black/[0.035]"
             }`}
           >
+            {/* =================================================
+               USER INFO
+               ================================================= */}
+
             <div className="flex min-w-0 items-center gap-3">
               {/* AVATAR */}
 
@@ -135,9 +154,9 @@ export default function FriendList({
                 />
               </div>
 
-              {/* USER INFO */}
+              {/* USER DETAILS */}
 
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <p className="truncate text-sm font-semibold">
                   {friend.username}
                 </p>
@@ -161,18 +180,36 @@ export default function FriendList({
                         : "text-black/35"
                   }`}
                 >
-                  {isOnline ? "Online" : "Offline"}
+                  {isOnline
+                    ? "Online"
+                    : "Offline"}
                 </div>
               </div>
             </div>
 
-            {/* ACTIONS */}
+            {/* =================================================
+               DIVIDER
+               ================================================= */}
 
-            <div className="flex items-center gap-2">
+            <div
+              className={`my-4 h-px ${
+                isDark
+                  ? "bg-white/[0.06]"
+                  : "bg-black/[0.06]"
+              }`}
+            />
+
+            {/* =================================================
+               ACTIONS
+               ================================================= */}
+
+            <div className="grid grid-cols-2 gap-2">
               <button
                 type="button"
-                onClick={() => onMessage(friend)}
-                className={`rounded-lg px-4 py-2 text-xs font-semibold transition-all active:scale-[0.97] ${
+                onClick={() =>
+                  onMessage(friend)
+                }
+                className={`min-w-0 rounded-lg px-3 py-2.5 text-xs font-semibold transition-all active:scale-[0.97] ${
                   isDark
                     ? "bg-white text-black hover:bg-white/90"
                     : "bg-black text-white hover:bg-black/85"
@@ -183,11 +220,13 @@ export default function FriendList({
 
               <button
                 type="button"
-                onClick={() => onRemove(friend)}
-                className={`rounded-lg border px-4 py-2 text-xs font-medium transition-all active:scale-[0.97] ${
+                onClick={() =>
+                  onRemove(friend)
+                }
+                className={`min-w-0 rounded-lg border px-3 py-2.5 text-xs font-medium transition-all active:scale-[0.97] ${
                   isDark
-                    ? "border-white/[0.08] bg-white/[0.03] text-white/70 hover:bg-white/[0.07]"
-                    : "border-black/[0.08] bg-black/[0.02] text-black/70 hover:bg-black/[0.05]"
+                    ? "border-white/[0.08] bg-white/[0.03] text-white/70 hover:bg-white/[0.07] hover:text-white"
+                    : "border-black/[0.08] bg-black/[0.02] text-black/70 hover:bg-black/[0.05] hover:text-black"
                 }`}
               >
                 Remove
