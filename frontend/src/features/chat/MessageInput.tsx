@@ -1,29 +1,78 @@
-import {
-  FormEvent,
-  useRef,
-  useState,
-} from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 type Theme = "dark" | "light";
 
 type MessageInputProps = {
   onSend: (text: string) => void;
+  onTyping: () => void;
+  onStopTyping: () => void;
   theme?: Theme;
 };
 
 const MAX_MESSAGE_LENGTH = 2000;
 const MAX_TEXTAREA_HEIGHT = 120;
+const TYPING_TIMEOUT = 1500;
 
 export default function MessageInput({
   onSend,
+  onTyping,
+  onStopTyping,
   theme = "dark",
 }: MessageInputProps) {
   const [text, setText] = useState("");
 
   const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const typingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const isTypingRef = useRef(false);
 
   const isDark = theme === "dark";
   const hasText = text.trim().length > 0;
+
+  /* =========================================================
+     TYPING STATE
+     ========================================================= */
+
+  const clearTypingTimer = () => {
+    if (typingTimerRef.current !== null) {
+      clearTimeout(typingTimerRef.current);
+      typingTimerRef.current = null;
+    }
+  };
+
+  const stopTyping = () => {
+    clearTypingTimer();
+
+    if (isTypingRef.current) {
+      isTypingRef.current = false;
+      onStopTyping();
+    }
+  };
+
+  const startTyping = () => {
+    if (!isTypingRef.current) {
+      isTypingRef.current = true;
+      onTyping();
+    }
+
+    clearTypingTimer();
+
+    typingTimerRef.current = setTimeout(() => {
+      isTypingRef.current = false;
+      typingTimerRef.current = null;
+      onStopTyping();
+    }, TYPING_TIMEOUT);
+  };
+
+  useEffect(() => {
+    return () => {
+      clearTypingTimer();
+
+      if (isTypingRef.current) {
+        isTypingRef.current = false;
+        onStopTyping();
+      }
+    };
+  }, [onStopTyping]);
 
   /* =========================================================
      RESET TEXTAREA HEIGHT
@@ -54,14 +103,12 @@ export default function MessageInput({
   const sendCurrentMessage = () => {
     const trimmedText = text.trim();
 
-    if (!trimmedText) {
-      return;
-    }
+    if (!trimmedText) return;
 
+    stopTyping();
     onSend(trimmedText);
 
     setText("");
-
     resetTextareaHeight();
     focusTextarea();
   };
@@ -72,7 +119,6 @@ export default function MessageInput({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     sendCurrentMessage();
   };
 
@@ -80,36 +126,33 @@ export default function MessageInput({
      TEXT CHANGE
      ========================================================= */
 
-  const handleChange = (
-    event: React.ChangeEvent<HTMLTextAreaElement>,
-  ) => {
-    const textarea = event.target;
+  const handleChange = (event: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const textarea = event.currentTarget;
+    const value = textarea.value;
 
-    setText(textarea.value);
+    setText(value);
 
-    /*
-     * Reset first so the textarea can shrink
-     * when text is deleted.
-     */
+    // Allow the textarea to shrink when text is deleted.
     textarea.style.height = "auto";
-
     textarea.style.height = `${Math.min(
       textarea.scrollHeight,
       MAX_TEXTAREA_HEIGHT,
     )}px`;
+
+    if (!value.trim()) {
+      stopTyping();
+      return;
+    }
+
+    startTyping();
   };
 
   /* =========================================================
      KEYBOARD
      ========================================================= */
 
-  const handleKeyDown = (
-    event: React.KeyboardEvent<HTMLTextAreaElement>,
-  ) => {
-    /*
-     * Enter = send
-     * Shift + Enter = new line
-     */
+  const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Enter sends; Shift + Enter inserts a new line.
     if (
       event.key === "Enter" &&
       !event.shiftKey &&
@@ -117,9 +160,7 @@ export default function MessageInput({
     ) {
       event.preventDefault();
 
-      if (!hasText) {
-        return;
-      }
+      if (!hasText) return;
 
       sendCurrentMessage();
     }
@@ -150,9 +191,7 @@ export default function MessageInput({
             ].join(" "),
       ].join(" ")}
     >
-      {/* =====================================================
-          TEXTAREA
-          ===================================================== */}
+      {/* TEXTAREA */}
 
       <div className="min-w-0 flex-1">
         <textarea
@@ -189,9 +228,7 @@ export default function MessageInput({
         />
       </div>
 
-      {/* =====================================================
-          SEND BUTTON
-          ===================================================== */}
+      {/* SEND BUTTON */}
 
       <button
         type="submit"
@@ -219,16 +256,12 @@ export default function MessageInput({
                   "active:scale-95",
                 ].join(" ")
             : isDark
-              ? [
-                  "cursor-not-allowed",
-                  "bg-white/[0.06]",
-                  "text-white/20",
-                ].join(" ")
-              : [
-                  "cursor-not-allowed",
-                  "bg-black/[0.05]",
-                  "text-black/20",
-                ].join(" "),
+              ? ["cursor-not-allowed", "bg-white/[0.06]", "text-white/20"].join(
+                  " ",
+                )
+              : ["cursor-not-allowed", "bg-black/[0.05]", "text-black/20"].join(
+                  " ",
+                ),
         ].join(" ")}
       >
         <svg

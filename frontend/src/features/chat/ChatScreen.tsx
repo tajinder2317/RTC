@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 import { useAuthStore } from "../auth/authStore";
@@ -16,6 +16,24 @@ type User = {
   id: string;
   username: string;
   email: string;
+};
+
+type Conversation = {
+  id: string;
+  createdAt: string;
+  unreadCount?: number;
+  members: {
+    user: User;
+  }[];
+  messages: {
+    id: string;
+    conversationId: string;
+    senderId: string;
+    text: string;
+    createdAt: string;
+    deliveredAt?: string | null;
+    readAt?: string | null;
+  }[];
 };
 
 export default function ChatScreen() {
@@ -39,10 +57,6 @@ export default function ChatScreen() {
 
   const onlineUserIds = usePresenceStore((state) => state.onlineUserIds);
 
-  const [users, setUsers] = useState<User[]>([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
-  const [creatingConversation, setCreatingConversation] = useState(false);
-
   const [friendRequestCount, setFriendRequestCount] = useState(0);
 
   const [typingUser, setTypingUser] = useState<{
@@ -51,12 +65,11 @@ export default function ChatScreen() {
   } | null>(null);
 
   const [theme, setTheme] = useState<"dark" | "light">(() => {
-    return localStorage.getItem("rtc-theme") === "light"
-      ? "light"
-      : "dark";
+    return localStorage.getItem("rtc-theme") === "light" ? "light" : "dark";
   });
 
   const [mobileChatOpen, setMobileChatOpen] = useState(false);
+  const [creatingConversation, setCreatingConversation] = useState(false);
 
   const readReceiptTimerRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
@@ -105,61 +118,6 @@ export default function ChatScreen() {
     unreadIncomingMessageIds.length > 0 && currentConversationId
       ? `${currentConversationId}:${unreadIncomingMessageIds.join(",")}`
       : null;
-
-  /* =========================================================
-     LOAD USERS
-     ========================================================= */
-
-  useEffect(() => {
-    if (!token) {
-      setUsers([]);
-      setLoadingUsers(false);
-      return;
-    }
-
-    let cancelled = false;
-
-    const fetchUsers = async () => {
-      try {
-        setLoadingUsers(true);
-
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/users`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to fetch users");
-        }
-
-        if (!cancelled) {
-          setUsers(Array.isArray(data.users) ? data.users : []);
-        }
-      } catch (error) {
-        console.error("Fetch users error:", error);
-
-        if (!cancelled) {
-          setUsers([]);
-        }
-      } finally {
-        if (!cancelled) {
-          setLoadingUsers(false);
-        }
-      }
-    };
-
-    void fetchUsers();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [token]);
 
   /* =========================================================
      FRIEND REQUEST COUNT
@@ -242,14 +200,12 @@ export default function ChatScreen() {
             (existingMessage) =>
               existingMessage.conversationId === currentConversationId &&
               !fetchedMessages.some(
-                (message: { id: string }) =>
-                  message.id === existingMessage.id,
+                (message: { id: string }) => message.id === existingMessage.id,
               ),
           ),
         ].sort(
           (a, b) =>
-            new Date(a.createdAt).getTime() -
-            new Date(b.createdAt).getTime(),
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime(),
         );
 
         setMessages(mergedMessages);
@@ -287,9 +243,7 @@ export default function ChatScreen() {
       return;
     }
 
-    if (
-      lastReadReceiptSignatureRef.current === unreadIncomingSignature
-    ) {
+    if (lastReadReceiptSignatureRef.current === unreadIncomingSignature) {
       return;
     }
 
@@ -309,15 +263,30 @@ export default function ChatScreen() {
         readReceiptTimerRef.current = null;
       }
     };
-  }, [
-    currentConversationId,
-    currentUser?.id,
-    token,
-    unreadIncomingSignature,
-  ]);
+  }, [currentConversationId, currentUser?.id, token, unreadIncomingSignature]);
 
   /* =========================================================
-     TYPING INDICATOR
+     TYPING EVENTS
+     ========================================================= */
+
+  const handleTyping = useCallback(() => {
+    if (!currentConversationId || !socket.connected) return;
+
+    socket.emit("typing", {
+      conversationId: currentConversationId,
+    });
+  }, [currentConversationId]);
+
+  const handleStopTyping = useCallback(() => {
+    if (!currentConversationId || !socket.connected) return;
+
+    socket.emit("stopTyping", {
+      conversationId: currentConversationId,
+    });
+  }, [currentConversationId]);
+
+  /* =========================================================
+     RECEIVE TYPING EVENTS
      ========================================================= */
 
   useEffect(() => {
@@ -355,7 +324,9 @@ export default function ChatScreen() {
         return;
       }
 
-      setTypingUser(null);
+      setTypingUser((previous) =>
+        previous?.userId === user.userId ? null : previous,
+      );
     };
 
     socket.on("userTyping", handleUserTyping);
@@ -372,23 +343,9 @@ export default function ChatScreen() {
      OPEN CONVERSATION
      ========================================================= */
 
-  const openConversation = (conversation: {
-    id: string;
-    createdAt: string;
-    unreadCount?: number;
-    members: {
-      user: User;
-    }[];
-    messages: {
-      id: string;
-      conversationId: string;
-      senderId: string;
-      text: string;
-      createdAt: string;
-      deliveredAt?: string | null;
-      readAt?: string | null;
-    }[];
-  }) => {
+  const openConversation = (conversation: Conversation) => {
+    setTypingUser(null);
+
     setMessages([]);
 
     setConversation({
@@ -405,59 +362,18 @@ export default function ChatScreen() {
   };
 
   /* =========================================================
-     START CONVERSATION
-     ========================================================= */
-
-  const startConversation = async (user: User) => {
-    if (!token || creatingConversation) {
-      return;
-    }
-
-    try {
-      setCreatingConversation(true);
-
-      const response = await fetch(
-        `${import.meta.env.VITE_API_URL}/conversations`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            userId: user.id,
-          }),
-        },
-      );
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(
-          data.message || "Failed to create conversation",
-        );
-      }
-
-      if (!data.conversation) {
-        throw new Error("Server returned no conversation");
-      }
-
-      openConversation(data.conversation);
-    } catch (error) {
-      console.error("Start conversation error:", error);
-    } finally {
-      setCreatingConversation(false);
-    }
-  };
-
-  /* =========================================================
      SEND MESSAGE
      ========================================================= */
 
   const sendMessage = (text: string) => {
     const trimmedText = text.trim();
 
-    if (!currentConversationId || !currentUser || !trimmedText) {
+    if (
+      !currentConversationId ||
+      !currentUser ||
+      !trimmedText ||
+      !socket.connected
+    ) {
       return;
     }
 
@@ -474,9 +390,7 @@ export default function ChatScreen() {
   return (
     <div
       className={`h-[100dvh] w-full overflow-hidden transition-colors duration-200 ${
-        isDark
-          ? "bg-[#070707] text-white"
-          : "bg-[#f3f4f6] text-[#111827]"
+        isDark ? "bg-[#070707] text-white" : "bg-[#f3f4f6] text-[#111827]"
       }`}
     >
       {/* HEADER */}
@@ -551,25 +465,17 @@ export default function ChatScreen() {
                     : "border-black/[0.10] bg-black/[0.07] text-black"
                 }`}
               >
-                {friendRequestCount > 99
-                  ? "99+"
-                  : friendRequestCount}
+                {friendRequestCount > 99 ? "99+" : friendRequestCount}
               </span>
             )}
           </button>
 
           <button
             type="button"
-            aria-label={`Switch to ${
-              isDark ? "light" : "dark"
-            } mode`}
-            title={`Switch to ${
-              isDark ? "light" : "dark"
-            } mode`}
+            aria-label={`Switch to ${isDark ? "light" : "dark"} mode`}
+            title={`Switch to ${isDark ? "light" : "dark"} mode`}
             onClick={() =>
-              setTheme((current) =>
-                current === "dark" ? "light" : "dark",
-              )
+              setTheme((current) => (current === "dark" ? "light" : "dark"))
             }
             className={`flex h-9 items-center gap-2 rounded-lg border px-3 text-xs font-medium backdrop-blur-md transition-all active:scale-[0.98] ${
               isDark
@@ -577,9 +483,7 @@ export default function ChatScreen() {
                 : "border-black/[0.08] bg-black/[0.035] text-black/65 hover:bg-black/[0.065] hover:text-black"
             }`}
           >
-            <span className="text-sm">
-              {isDark ? "☀" : "☾"}
-            </span>
+            <span className="text-sm">{isDark ? "☀" : "☾"}</span>
 
             <span className="hidden sm:inline">
               {isDark ? "Light" : "Dark"}
@@ -602,17 +506,13 @@ export default function ChatScreen() {
 
           <aside
             className={`min-w-0 flex-col overflow-hidden border-r ${
-              isDark
-                ? "border-white/[0.08]"
-                : "border-black/[0.07]"
+              isDark ? "border-white/[0.08]" : "border-black/[0.07]"
             } ${
               mobileChatOpen
                 ? "hidden md:flex"
                 : "flex w-full md:w-[330px] md:flex-none lg:w-[360px]"
             }`}
           >
-            {/* SIDEBAR HEADER */}
-
             <div
               className={`flex h-16 shrink-0 items-center border-b px-5 backdrop-blur-xl ${
                 isDark
@@ -621,15 +521,11 @@ export default function ChatScreen() {
               }`}
             >
               <div>
-                <h2 className="text-sm font-semibold">
-                  Conversations
-                </h2>
+                <h2 className="text-sm font-semibold">Conversations</h2>
 
                 <p
                   className={`mt-0.5 text-[11px] ${
-                    isDark
-                      ? "text-white/40"
-                      : "text-black/40"
+                    isDark ? "text-white/40" : "text-black/40"
                   }`}
                 >
                   Your recent chats
@@ -650,9 +546,7 @@ export default function ChatScreen() {
 
           <section
             className={`min-w-0 flex-1 flex-col overflow-hidden ${
-              mobileChatOpen
-                ? "flex"
-                : "hidden md:flex"
+              mobileChatOpen ? "flex" : "hidden md:flex"
             }`}
           >
             {!selectedUser || !currentConversationId ? (
@@ -674,13 +568,11 @@ export default function ChatScreen() {
 
                   <p
                     className={`mt-2 text-sm leading-6 ${
-                      isDark
-                        ? "text-white/40"
-                        : "text-black/45"
+                      isDark ? "text-white/40" : "text-black/45"
                     }`}
                   >
-                    Choose a conversation from the sidebar to
-                    start messaging in real time.
+                    Choose a conversation from the sidebar to start messaging in
+                    real time.
                   </p>
                 </div>
               </div>
@@ -716,16 +608,12 @@ export default function ChatScreen() {
                           : "border-black/[0.07] bg-black/[0.05] text-black"
                       }`}
                     >
-                      {selectedUser.username
-                        .slice(0, 2)
-                        .toUpperCase()}
+                      {selectedUser.username.slice(0, 2).toUpperCase()}
                     </div>
 
                     <span
                       className={`absolute bottom-0 right-0 h-2.5 w-2.5 rounded-full border-2 ${
-                        isDark
-                          ? "border-[#101010]"
-                          : "border-[#f8f8f8]"
+                        isDark ? "border-[#101010]" : "border-[#f8f8f8]"
                       } ${
                         isSelectedUserOnline
                           ? "bg-emerald-500"
@@ -761,9 +649,7 @@ export default function ChatScreen() {
                               : "text-black/40"
                         }`}
                       >
-                        {isSelectedUserOnline
-                          ? "Online"
-                          : "Offline"}
+                        {isSelectedUserOnline ? "Online" : "Offline"}
                       </span>
                     </div>
                   </div>
@@ -773,9 +659,7 @@ export default function ChatScreen() {
 
                 <div
                   className={`min-h-0 flex-1 overflow-y-auto ${
-                    isDark
-                      ? "bg-[#0a0a0a]"
-                      : "bg-[#f3f4f6]"
+                    isDark ? "bg-[#0a0a0a]" : "bg-[#f3f4f6]"
                   }`}
                 >
                   <ChatMessages
@@ -785,24 +669,21 @@ export default function ChatScreen() {
                   />
                 </div>
 
-                {/* TYPING */}
+                {/* TYPING INDICATOR */}
 
-                {typingUser &&
-                  typingUser.userId !== currentUser?.id && (
-                    <div
-                      className={`shrink-0 border-t px-4 py-2 backdrop-blur-xl ${
-                        isDark
-                          ? "border-white/[0.08] bg-white/[0.025]"
-                          : "border-black/[0.07] bg-black/[0.02]"
-                      }`}
-                    >
-                      <div className="mx-auto max-w-4xl">
-                        <TypingIndicator
-                          username={typingUser.username}
-                        />
-                      </div>
+                {typingUser && typingUser.userId !== currentUser?.id && (
+                  <div
+                    className={`shrink-0 border-t px-4 py-2 backdrop-blur-xl ${
+                      isDark
+                        ? "border-white/[0.08] bg-white/[0.025]"
+                        : "border-black/[0.07] bg-black/[0.02]"
+                    }`}
+                  >
+                    <div className="mx-auto max-w-4xl">
+                      <TypingIndicator username={typingUser.username} />
                     </div>
-                  )}
+                  </div>
+                )}
 
                 {/* MESSAGE INPUT */}
 
@@ -816,6 +697,8 @@ export default function ChatScreen() {
                   <div className="mx-auto w-full max-w-4xl">
                     <MessageInput
                       onSend={sendMessage}
+                      onTyping={handleTyping}
+                      onStopTyping={handleStopTyping}
                       theme={theme}
                     />
                   </div>
