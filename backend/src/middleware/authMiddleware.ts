@@ -30,7 +30,8 @@ export const authenticateToken = (
       });
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+    const jwtSecret = process.env.JWT_SECRET || "default_dev_secret";
+    const decoded = jwt.verify(token, jwtSecret) as {
       userId: string;
       username: string;
     };

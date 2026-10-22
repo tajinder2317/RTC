@@ -7,18 +7,32 @@ export const socket: Socket = io(SOCKET_URL, {
   transports: ["websocket"],
 });
 
+let currentToken: string | null = null;
+
 export function connectSocket(token: string) {
-  socket.auth = {
-    token,
-  };
+  if (!token) return;
+
+  if (currentToken !== token) {
+    if (socket.connected) {
+      socket.disconnect();
+    }
+    currentToken = token;
+    socket.auth = {
+      token,
+    };
+    socket.connect();
+    return;
+  }
 
   if (!socket.connected) {
+    socket.auth = {
+      token,
+    };
     socket.connect();
   }
 }
 
 export function disconnectSocket() {
-  if (socket.connected) {
-    socket.disconnect();
-  }
+  currentToken = null;
+  socket.disconnect();
 }

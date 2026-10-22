@@ -15,13 +15,31 @@ type AuthState = {
   logout: () => void;
 };
 
-const storedToken = localStorage.getItem("token");
-const storedUser = localStorage.getItem("user");
+function getInitialUser(): User | null {
+  try {
+    const raw = localStorage.getItem("user");
+    if (!raw || raw === "undefined" || raw === "null") {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (parsed && typeof parsed === "object" && parsed.id && parsed.username) {
+      return parsed as User;
+    }
+    localStorage.removeItem("user");
+    return null;
+  } catch {
+    localStorage.removeItem("user");
+    return null;
+  }
+}
+
+const initialToken = localStorage.getItem("token") || null;
+const initialUser = getInitialUser();
 
 export const useAuthStore = create<AuthState>((set) => ({
-  token: storedToken,
-  user: storedUser ? JSON.parse(storedUser) : null,
-  isAuthenticated: !!storedToken,
+  token: initialToken,
+  user: initialUser,
+  isAuthenticated: !!(initialToken && initialUser),
 
   login: (token, user) => {
     localStorage.setItem("token", token);
@@ -45,3 +63,4 @@ export const useAuthStore = create<AuthState>((set) => ({
     });
   },
 }));
+

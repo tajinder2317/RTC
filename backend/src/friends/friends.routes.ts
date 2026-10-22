@@ -100,16 +100,28 @@ const sendFriendRequestHandler = async (req: AuthRequest, res: any) => {
       });
     }
 
-    const outgoingRequest = await prisma.friendRequest.findFirst({
-      where: {
-        senderId,
-        receiverId,
-      },
-    });
+    if (outgoingRequest) {
+      if (outgoingRequest.status === "PENDING") {
+        return res.status(409).json({
+          message: "Friend request already exists",
+        });
+      }
 
-    if (outgoingRequest?.status === "PENDING") {
-      return res.status(409).json({
-        message: "Friend request already exists",
+      const updatedRequest = await prisma.friendRequest.update({
+        where: {
+          id: outgoingRequest.id,
+        },
+        data: {
+          status: "PENDING",
+        },
+        include: buildFriendRequestInclude,
+      });
+
+      emitFriendRequestNew(receiverId, updatedRequest);
+
+      return res.status(201).json({
+        message: "Friend request sent",
+        request: updatedRequest,
       });
     }
 
@@ -157,25 +169,6 @@ const sendFriendRequestHandler = async (req: AuthRequest, res: any) => {
       return res.status(200).json({
         message: "Friend request accepted",
         friendship,
-      });
-    }
-
-    if (outgoingRequest && outgoingRequest.status === "REJECTED") {
-      const updatedRequest = await prisma.friendRequest.update({
-        where: {
-          id: outgoingRequest.id,
-        },
-        data: {
-          status: "PENDING",
-        },
-        include: buildFriendRequestInclude,
-      });
-
-      emitFriendRequestNew(receiverId, updatedRequest);
-
-      return res.status(201).json({
-        message: "Friend request sent",
-        request: updatedRequest,
       });
     }
 
@@ -440,11 +433,21 @@ router.delete("/:userId", authenticateToken, async (req: AuthRequest, res) => {
       });
     }
 
-    await prisma.friendship.delete({
-      where: {
-        id: friendship.id,
-      },
-    });
+    await prisma.$transaction([
+      prisma.friendship.delete({
+        where: {
+          id: friendship.id,
+        },
+      }),
+      prisma.friendRequest.deleteMany({
+        where: {
+          OR: [
+            { senderId: userId, receiverId: friendId },
+            { senderId: friendId, receiverId: userId },
+          ],
+        },
+      }),
+    ]);
 
     return res.json({
       message: "Friend removed",

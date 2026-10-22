@@ -21,6 +21,13 @@ router.post(
         });
       }
 
+      const trimmedText = text.trim();
+      if (trimmedText.length > 5000) {
+        return res.status(400).json({
+          message: "Message text exceeds maximum length of 5000 characters",
+        });
+      }
+
       const membership = await prisma.conversationMember.findUnique({
         where: {
           userId_conversationId: {

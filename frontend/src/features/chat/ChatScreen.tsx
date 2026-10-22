@@ -8,7 +8,7 @@ import ChatMessages from "./ChatMessages";
 import { useChatStore } from "./chatStore";
 import { socket } from "../../services/socket";
 import TypingIndicator from "./TypingIndicator";
-import { getFriendRequests } from "../../services/api";
+import { getFriendRequests, getMessages } from "../../services/api";
 import { subscribeToFriendEvents } from "../friends/friendsRealtime";
 import { usePresenceStore } from "../presence/presenceStore";
 
@@ -39,6 +39,7 @@ type Conversation = {
 export default function ChatScreen() {
   const token = useAuthStore((state) => state.token);
   const currentUser = useAuthStore((state) => state.user);
+  const logout = useAuthStore((state) => state.logout);
 
   const navigate = useNavigate();
 
@@ -83,9 +84,17 @@ export default function ChatScreen() {
 
   useEffect(() => {
     localStorage.setItem("rtc-theme", theme);
+    document.documentElement.classList.toggle("dark", theme === "dark");
   }, [theme]);
 
   const isDark = theme === "dark";
+
+  const handleLogout = () => {
+    useChatStore.getState().clearMessages();
+    usePresenceStore.getState().clearPresence();
+    logout();
+    navigate("/login", { replace: true });
+  };
 
   /* =========================================================
      SELECTED USER
@@ -171,28 +180,13 @@ export default function ChatScreen() {
 
     const fetchMessages = async () => {
       try {
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/messages/${currentConversationId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(data.message || "Failed to load messages");
-        }
+        const fetched = await getMessages(token, currentConversationId);
 
         if (cancelled) return;
 
         const existingMessages = useChatStore.getState().messages;
 
-        const fetchedMessages = Array.isArray(data.messages)
-          ? data.messages
-          : [];
+        const fetchedMessages = Array.isArray(fetched) ? fetched : [];
 
         const mergedMessages = [
           ...fetchedMessages,
@@ -374,13 +368,14 @@ export default function ChatScreen() {
       !trimmedText ||
       !socket.connected
     ) {
-      return;
+      return false;
     }
 
     socket.emit("sendMessage", {
       conversationId: currentConversationId,
       text: trimmedText,
     });
+    return true;
   };
 
   /* =========================================================

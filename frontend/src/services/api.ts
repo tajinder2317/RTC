@@ -85,6 +85,38 @@ export async function createConversation(token: string, userId: string) {
   return data.conversation;
 }
 
+export async function getConversations(token: string) {
+  const response = await fetch(`${API_URL}/conversations`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to fetch conversations");
+  }
+
+  return data.conversations;
+}
+
+export async function getMessages(token: string, conversationId: string) {
+  const response = await fetch(`${API_URL}/messages/${conversationId}`, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  const data = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Failed to load messages");
+  }
+
+  return data.messages;
+}
+
 export type RelationshipStatus =
   | "SELF"
   | "FRIENDS"

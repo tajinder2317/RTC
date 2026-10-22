@@ -19,7 +19,8 @@ export function registerChatSocket(io: Server) {
         return next(new Error("Authentication required"));
       }
 
-      const decoded = jwt.verify(token, process.env.JWT_SECRET!) as JwtPayload;
+      const jwtSecret = process.env.JWT_SECRET || "default_dev_secret";
+      const decoded = jwt.verify(token, jwtSecret) as JwtPayload;
 
       socket.data.userId = decoded.userId;
       socket.data.username = decoded.username;
@@ -241,6 +242,11 @@ export function registerChatSocket(io: Server) {
             return;
           }
 
+          const trimmedText = text.trim();
+          if (trimmedText.length > 5000) {
+            return;
+          }
+
           const membership = await prisma.conversationMember.findUnique({
             where: {
               userId_conversationId: {
@@ -259,7 +265,7 @@ export function registerChatSocket(io: Server) {
             data: {
               conversationId,
               senderId: userId,
-              text: text.trim(),
+              text: trimmedText,
             },
           });
 
@@ -290,6 +296,7 @@ export function registerChatSocket(io: Server) {
     socket.on("messageDelivered", async (data: { messageId: string }) => {
       try {
         const { messageId } = data;
+        if (!messageId) return;
 
         const message = await prisma.message.findUnique({
           where: {
@@ -303,6 +310,25 @@ export function registerChatSocket(io: Server) {
 
         // Don't allow the sender to mark their own message delivered
         if (message.senderId === userId) {
+          return;
+        }
+
+        // Verify requesting user is a member of the conversation
+        const membership = await prisma.conversationMember.findUnique({
+          where: {
+            userId_conversationId: {
+              userId,
+              conversationId: message.conversationId,
+            },
+          },
+        });
+
+        if (!membership) {
+          return;
+        }
+
+        // If already delivered, don't update timestamp again
+        if (message.deliveredAt) {
           return;
         }
 

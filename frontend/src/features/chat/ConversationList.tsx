@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { useAuthStore } from "../auth/authStore";
 import { socket } from "../../services/socket";
-import { getUsers, createConversation } from "../../services/api";
+import { getUsers, createConversation, getConversations } from "../../services/api";
 
 import type { Conversation, ChatUser } from "./chatStore";
 
@@ -190,36 +190,15 @@ export default function ConversationList({
 
     let cancelled = false;
 
-    const loadConversations = async () => {
+    const fetchConversations = async () => {
       try {
         setLoading(true);
 
-        const response = await fetch(
-          `${import.meta.env.VITE_API_URL}/conversations`,
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-            },
-          },
-        );
-
-        const data = await response.json();
-
-        if (!response.ok) {
-          throw new Error(
-            data.message || "Failed to fetch conversations",
-          );
-        }
+        const loaded = await getConversations(token);
 
         if (cancelled) return;
 
-        const loaded: Conversation[] = Array.isArray(
-          data.conversations,
-        )
-          ? data.conversations
-          : [];
-
-        setConversations(normalizeConversations(loaded));
+        setConversations(normalizeConversations(Array.isArray(loaded) ? loaded : []));
       } catch (error) {
         if (!cancelled) {
           console.error(
@@ -235,7 +214,7 @@ export default function ConversationList({
       }
     };
 
-    void loadConversations();
+    void fetchConversations();
 
     return () => {
       cancelled = true;
@@ -318,6 +297,13 @@ export default function ConversationList({
         );
 
         if (!existing) {
+          if (token) {
+            void getConversations(token).then((loaded) => {
+              if (Array.isArray(loaded)) {
+                setConversations(normalizeConversations(loaded));
+              }
+            });
+          }
           return previous;
         }
 
@@ -494,12 +480,13 @@ export default function ConversationList({
      ========================================================= */
 
   const quickChatUser = useMemo(() => {
-    return users.find(
-      (user) =>
-        user.username === "dhillon2317" &&
-        user.id !== currentUser?.id,
+    return (
+      users.find(
+        (user) =>
+          user.id !== currentUser?.id && onlineUserIds.includes(user.id),
+      ) || users.find((user) => user.id !== currentUser?.id)
     );
-  }, [users, currentUser?.id]);
+  }, [users, currentUser?.id, onlineUserIds]);
 
   /* =========================================================
      SEARCH
@@ -1092,8 +1079,7 @@ export default function ConversationList({
                 : "border-black/[0.06] bg-black/[0.02] text-black/35"
             }`}
           >
-            User <strong>dhillon2317</strong> not
-            found.
+            No other users available.
           </div>
         )}
       </div>

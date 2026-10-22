@@ -3,7 +3,7 @@ import { FormEvent, useEffect, useRef, useState } from "react";
 type Theme = "dark" | "light";
 
 type MessageInputProps = {
-  onSend: (text: string) => void;
+  onSend: (text: string) => boolean | void;
   onTyping: () => void;
   onStopTyping: () => void;
   theme?: Theme;
@@ -105,9 +105,12 @@ export default function MessageInput({
 
     if (!trimmedText) return;
 
-    stopTyping();
-    onSend(trimmedText);
+    const result = onSend(trimmedText);
+    if (result === false) {
+      return;
+    }
 
+    stopTyping();
     setText("");
     resetTextareaHeight();
     focusTextarea();

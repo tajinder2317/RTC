@@ -18,9 +18,24 @@ router.post("/register", async (req, res) => {
       });
     }
 
+    const trimmedUsername = username.trim();
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (trimmedUsername.length < 2 || trimmedUsername.length > 30) {
+      return res.status(400).json({
+        message: "Username must be between 2 and 30 characters",
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        message: "Password must be at least 6 characters",
+      });
+    }
+
     const existingUser = await prisma.user.findFirst({
       where: {
-        OR: [{ username }, { email }],
+        OR: [{ username: trimmedUsername }, { email: normalizedEmail }],
       },
     });
 
@@ -34,8 +49,8 @@ router.post("/register", async (req, res) => {
 
     const user = await prisma.user.create({
       data: {
-        username,
-        email,
+        username: trimmedUsername,
+        email: normalizedEmail,
         password: hashedPassword,
       },
     });
@@ -45,7 +60,7 @@ router.post("/register", async (req, res) => {
         userId: user.id,
         username: user.username,
       },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || "default_dev_secret",
       {
         expiresIn: "7d",
       },
@@ -80,9 +95,11 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     const user = await prisma.user.findUnique({
       where: {
-        email,
+        email: normalizedEmail,
       },
     });
 
@@ -105,7 +122,7 @@ router.post("/login", async (req, res) => {
         userId: user.id,
         username: user.username,
       },
-      process.env.JWT_SECRET!,
+      process.env.JWT_SECRET || "default_dev_secret",
       {
         expiresIn: "7d",
       },
@@ -130,11 +147,35 @@ router.post("/login", async (req, res) => {
 });
 
 // Current user
-router.get("/me", authenticateToken, (req: AuthRequest, res) => {
-  return res.json({
-    message: "You are authenticated",
-    user: req.user,
-  });
+router.get("/me", authenticateToken, async (req: AuthRequest, res) => {
+  try {
+    const user = await prisma.user.findUnique({
+      where: {
+        id: req.user!.userId,
+      },
+      select: {
+        id: true,
+        username: true,
+        email: true,
+      },
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        message: "User not found",
+      });
+    }
+
+    return res.json({
+      message: "You are authenticated",
+      user,
+    });
+  } catch (error) {
+    console.error("Auth /me error:", error);
+    return res.status(500).json({
+      message: "Internal server error",
+    });
+  }
 });
 
 export default router;
