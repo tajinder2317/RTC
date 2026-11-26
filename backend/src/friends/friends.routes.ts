@@ -100,16 +100,71 @@ const sendFriendRequestHandler = async (req: AuthRequest, res: any) => {
       });
     }
 
-    if (outgoingRequest) {
-      if (outgoingRequest.status === "PENDING") {
-        return res.status(409).json({
-          message: "Friend request already exists",
+    const existingRequest = await prisma.friendRequest.findFirst({
+      where: {
+        OR: [
+          {
+            senderId,
+            receiverId,
+          },
+          {
+            senderId: receiverId,
+            receiverId: senderId,
+          },
+        ],
+      },
+      include: buildFriendRequestInclude,
+    });
+
+    if (existingRequest) {
+      if (existingRequest.status === "PENDING") {
+        if (existingRequest.senderId === senderId) {
+          return res.status(409).json({
+            message: "Friend request already exists",
+          });
+        }
+
+        const friendship = await prisma.$transaction(async (tx) => {
+          await tx.friendRequest.update({
+            where: {
+              id: existingRequest.id,
+            },
+            data: {
+              status: "ACCEPTED",
+            },
+          });
+
+          const [userAId, userBId] = normalizeFriendPair(senderId, receiverId);
+
+          return tx.friendship.create({
+            data: {
+              userAId,
+              userBId,
+            },
+          });
+        });
+
+        emitFriendRequestAccepted(receiverId, {
+          friendship,
+          friend: {
+            id: senderId,
+            username: req.user!.username,
+          },
+        });
+        emitFriendRequestAccepted(senderId, {
+          friendship,
+          friend: receiver,
+        });
+
+        return res.status(200).json({
+          message: "Friend request accepted",
+          friendship,
         });
       }
 
       const updatedRequest = await prisma.friendRequest.update({
         where: {
-          id: outgoingRequest.id,
+          id: existingRequest.id,
         },
         data: {
           status: "PENDING",
@@ -122,53 +177,6 @@ const sendFriendRequestHandler = async (req: AuthRequest, res: any) => {
       return res.status(201).json({
         message: "Friend request sent",
         request: updatedRequest,
-      });
-    }
-
-    const incomingRequest = await prisma.friendRequest.findFirst({
-      where: {
-        senderId: receiverId,
-        receiverId: senderId,
-        status: "PENDING",
-      },
-    });
-
-    if (incomingRequest) {
-      const friendship = await prisma.$transaction(async (tx) => {
-        await tx.friendRequest.update({
-          where: {
-            id: incomingRequest.id,
-          },
-          data: {
-            status: "ACCEPTED",
-          },
-        });
-
-        const [userAId, userBId] = normalizeFriendPair(senderId, receiverId);
-
-        return tx.friendship.create({
-          data: {
-            userAId,
-            userBId,
-          },
-        });
-      });
-
-      emitFriendRequestAccepted(receiverId, {
-        friendship,
-        friend: {
-          id: senderId,
-          username: req.user!.username,
-        },
-      });
-      emitFriendRequestAccepted(senderId, {
-        friendship,
-        friend: receiver,
-      });
-
-      return res.status(200).json({
-        message: "Friend request accepted",
-        friendship,
       });
     }
 
